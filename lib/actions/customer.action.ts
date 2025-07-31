@@ -5,7 +5,21 @@ import { prisma } from "../prisma";
 import { auth } from "@clerk/nextjs/server";
 
 export const getCustomers = async () => {
-  const customers = await prisma.customer.findMany({});
+     const { userId } = await auth();
+    if (!userId) {
+      return []
+    }
+
+    const user = await prisma.user.findUnique({
+      where: { clerkId: userId }
+    });
+    if (!user) {
+      return []
+    }
+    
+  const customers = await prisma.customer.findMany({where:{
+    userId:user.id
+  }});
   return customers;
 };
 

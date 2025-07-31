@@ -5,7 +5,22 @@ import { auth, currentUser } from "@clerk/nextjs/server";
 import { success, z } from "zod";
 
 export const getProducts = async () => {
+  const { userId } = await auth();
+  if (!userId) {
+    return [];
+  }
+
+  const user = await prisma.user.findUnique({
+    where: { clerkId: userId },
+  });
+  if (!user) {
+    return [];
+  }
+
   const products = await prisma.product.findMany({
+    where: {
+      userId: user.id,
+    },
     include: {
       variants: true,
     },
@@ -33,7 +48,7 @@ export async function addProduct(data: unknown) {
 
     const parsed = productSchema.safeParse(data);
     if (!parsed.success) {
-      console.error(parsed.error.format()); 
+      console.error(parsed.error.format());
       throw new Error("Validation failed");
     }
 
@@ -63,7 +78,7 @@ export async function addProduct(data: unknown) {
 
     return product;
   } catch (error: any) {
-    console.error("addProduct error:", error); 
+    console.error("addProduct error:", error);
     throw new Error("Something went wrong while adding the product.");
   }
 }
@@ -72,7 +87,7 @@ export async function deleteProduct(id: string) {
   try {
     const { userId } = await auth();
     if (!userId) return { success: false, message: "Unauthorized" };
-    
+
     const user = await prisma.user.findFirst({
       where: {
         clerkId: userId,
@@ -80,16 +95,18 @@ export async function deleteProduct(id: string) {
     });
     if (!user) return { success: false, message: "User not found" };
 
-    
     const product = await prisma.product.findFirst({
       where: {
         id,
         userId: user.id,
       },
     });
-    if (!product) return { success: false, message: "Product not found or not owned by user" };
+    if (!product)
+      return {
+        success: false,
+        message: "Product not found or not owned by user",
+      };
 
-    
     await prisma.product.delete({
       where: {
         id,
