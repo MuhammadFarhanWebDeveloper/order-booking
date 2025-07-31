@@ -30,44 +30,7 @@ export default function OrdersPage() {
 
   return (
     <div>
-      <div className="flex items-center justify-between">
-        <h1 className="font-semibold text-lg md:text-2xl">Orders</h1>
-        <Button asChild size="sm">
-          <Link href="/orders/add">Add New Order</Link>
-        </Button>
-      </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
-          <CardDescription>A list of your recent orders.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead className="hidden md:table-cell">Date</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{order.customer}</TableCell>
-                  <TableCell className="hidden md:table-cell">{order.date}</TableCell>
-                  <TableCell className="text-right">{order.total}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+      Working on this feature...
     </div>
   )
 }
