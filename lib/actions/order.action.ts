@@ -4,37 +4,6 @@ import { auth } from "@clerk/nextjs/server";
 import z from "zod";
 import { prisma } from "../prisma";
 
-export const getOrders = async () => {
-  const { userId } = await auth();
-  if (!userId) {
-    return { success: false, message: "Unauthorized" };
-  }
-
-  const orders = await prisma.order.findMany({
-
-    include: {
-      customer: true,
-      items: {
-        include: {
-          product: true,
-        },
-      },
-    },
-    orderBy: {
-      createdAt: "desc",
-    },
-  });
-
-  return {
-    success: true,
-    data: orders,
-  };
-};
-
-
-
-
-
 const orderSchema = z.object({
   status: z.enum(["PENDING", "COMPLETED", "CANCELED"]).default("PENDING"),
   customerId: z.string(),

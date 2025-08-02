@@ -4,32 +4,6 @@ import { prisma } from "../prisma";
 import { auth } from "@clerk/nextjs/server";
 import { z } from "zod";
 
-<<<<<<< HEAD
-export const getProducts = async () => {
-  const { userId } = await auth();
-  if (!userId) {
-    return [];
-  }
-
-  const user = await prisma.user.findUnique({
-    where: { clerkId: userId },
-  });
-  if (!user) {
-    return [];
-  }
-
-  const products = await prisma.product.findMany({
-    where: {
-      userId: user.id,
-    },
-    include: {
-      variants: true,
-    },
-  });
-  return products;
-};
-=======
-// 🧠 Zod enums must match your Prisma enums (case-sensitive)
 const categoryEnum = z.enum([
   "ELECTRONICS",
   "GROCERY",
@@ -41,7 +15,6 @@ const categoryEnum = z.enum([
   "MEDICINE",
   "OTHER",
 ]);
->>>>>>> features
 
 const unitEnum = z.enum([
   "PIECE",
@@ -65,10 +38,6 @@ const productSchema = z.object({
 
 export type ProductFormValues = z.infer<typeof productSchema>;
 
-export const getProducts = async () => {
-  const products = await prisma.product.findMany();
-  return products;
-};
 
 export async function addProduct(data: unknown) {
   try {
