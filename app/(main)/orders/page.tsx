@@ -62,9 +62,6 @@ export default function OrdersPage() {
 
   return (
     <div>
-<<<<<<< HEAD
-      Working on this feature...
-=======
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <h1 className="font-semibold text-lg md:text-2xl">Orders</h1>
         <Button asChild size="sm">
@@ -105,7 +102,6 @@ export default function OrdersPage() {
           ))}
         </div>
       )}
->>>>>>> features
     </div>
   );
 }
