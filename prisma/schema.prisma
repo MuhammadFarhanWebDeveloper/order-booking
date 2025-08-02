@@ -1,9 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -43,41 +40,74 @@ model Customer {
   orders Order[]
 }
 
-model Product {
-  id          String   @id @default(cuid())
-  name        String
-  description String
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
-
-  variants Variant[]
-
-  Order Order[]
-}
-
-model Variant {
-  id        String  @id @default(cuid())
-  name      String
-  price     Float
-  product   Product @relation(fields: [productId], references: [id])
-  productId String
-}
-
 model Order {
   id          String      @id @default(cuid())
   totalAmount Float
   status      OrderStatus @default(PENDING)
   createdAt   DateTime    @default(now())
+
   user        User        @relation(fields: [userId], references: [id])
   userId      String
 
-  customer   Customer @relation(fields: [customerId], references: [id])
-  customerId String
+  customer    Customer    @relation(fields: [customerId], references: [id])
+  customerId  String
 
-  items Product[]
+  items       OrderItem[] // Relation to OrderItem
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  name        String
+  description String
+  category    Category         // 🔥 Enum for category
+  price       Float
+  unit        Unit             // 🔥 Enum for unit
+
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user        User     @relation(fields: [userId], references: [id])
+  userId      String
+
+  orderItems  OrderItem[] // Backrelation
+}
+
+enum Category {
+  ELECTRONICS
+  GROCERY
+  CLOTHING
+  STATIONERY
+  BEAUTY
+  FURNITURE
+  TOYS
+  MEDICINE
+  OTHER
+}
+
+enum Unit {
+  PIECE
+  GRAM
+  KILOGRAM
+  LITRE
+  MILLILITRE
+  METER
+  CENTIMETER
+  BOX
+  PACK
+}
+
+
+model OrderItem {
+  id        String   @id @default(cuid())
+
+  order     Order    @relation(fields: [orderId], references: [id])
+  orderId   String
+
+  product   Product  @relation(fields: [productId], references: [id])
+  productId String
+
+  quantity  Int      @default(1)
+  price     Float    // Price at the time of order
 }
 
 enum OrderStatus {

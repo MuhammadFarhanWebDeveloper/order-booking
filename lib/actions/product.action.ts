@@ -1,47 +1,68 @@
 "use server";
 
 import { prisma } from "../prisma";
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { success, z } from "zod";
+import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 
-export const getProducts = async () => {
-  const products = await prisma.product.findMany({
-    include: {
-      variants: true,
-    },
-  });
-  return products;
-};
+// 🧠 Zod enums must match your Prisma enums (case-sensitive)
+const categoryEnum = z.enum([
+  "ELECTRONICS",
+  "GROCERY",
+  "CLOTHING",
+  "STATIONERY",
+  "BEAUTY",
+  "FURNITURE",
+  "TOYS",
+  "MEDICINE",
+  "OTHER",
+]);
 
-const variantSchema = z.object({
-  name: z.string().min(1),
-  price: z.coerce.number().min(0),
-});
+const unitEnum = z.enum([
+  "PIECE",
+  "GRAM",
+  "KILOGRAM",
+  "LITRE",
+  "MILLILITRE",
+  "METER",
+  "CENTIMETER",
+  "BOX",
+  "PACK",
+]);
 
 const productSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
-  variants: z.array(variantSchema).min(1),
+  category: categoryEnum,
+  unit: unitEnum,
+  price: z.coerce.number().min(0),
 });
+
+export type ProductFormValues = z.infer<typeof productSchema>;
+
+export const getProducts = async () => {
+  const products = await prisma.product.findMany();
+  return products;
+};
 
 export async function addProduct(data: unknown) {
   try {
-    const user = await currentUser();
-    if (!user || !user.id) {
+    // const user = await currentUser();
+    const {userId}  = await auth()
+    if (!userId) {
       throw new Error("Unauthorized");
     }
 
     const parsed = productSchema.safeParse(data);
     if (!parsed.success) {
-      console.error(parsed.error.format()); 
+      console.error(parsed.error.format());
       throw new Error("Validation failed");
     }
 
-    const { name, description, variants } = parsed.data;
+    const { name, description, category, unit, price } = parsed.data;
 
     const dbUser = await prisma.user.findFirst({
       where: {
-        clerkId: user.id,
+        clerkId: userId,
       },
     });
 
@@ -53,17 +74,16 @@ export async function addProduct(data: unknown) {
       data: {
         name,
         description,
+        category,
+        unit,
+        price,
         userId: dbUser.id,
-        variants: {
-          create: variants,
-        },
       },
-      include: { variants: true },
     });
 
     return product;
   } catch (error: any) {
-    console.error("addProduct error:", error); 
+    console.error("addProduct error:", error);
     throw new Error("Something went wrong while adding the product.");
   }
 }
@@ -72,7 +92,7 @@ export async function deleteProduct(id: string) {
   try {
     const { userId } = await auth();
     if (!userId) return { success: false, message: "Unauthorized" };
-    
+
     const user = await prisma.user.findFirst({
       where: {
         clerkId: userId,
@@ -80,7 +100,6 @@ export async function deleteProduct(id: string) {
     });
     if (!user) return { success: false, message: "User not found" };
 
-    
     const product = await prisma.product.findFirst({
       where: {
         id,
@@ -89,7 +108,6 @@ export async function deleteProduct(id: string) {
     });
     if (!product) return { success: false, message: "Product not found or not owned by user" };
 
-    
     await prisma.product.delete({
       where: {
         id,

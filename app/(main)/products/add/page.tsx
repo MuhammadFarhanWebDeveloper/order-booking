@@ -18,56 +18,72 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-
-import { useForm, useFieldArray } from "react-hook-form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { PlusCircle, XCircle } from "lucide-react";
 import { useTransition } from "react";
-import { toast } from "sonner"; // or your toast lib
+import { toast } from "sonner";
 import { addProduct } from "@/lib/actions/product.action";
-import { useRouter } from "next/navigation";
-
-const variantSchema = z.object({
-  name: z.string().min(1, { message: "Variant name is required." }),
-  price: z.coerce.number().min(0, { message: "Price must be non-negative." }),
-});
-
+import { useRouter } from "nextjs-toploader/app";
+// Schema with enums
 const formSchema = z.object({
   name: z.string().min(1, { message: "Product name is required." }),
   description: z.string().min(1, { message: "Description is required." }),
-  variants: z.array(variantSchema).min(1, {
-    message: "At least one variant is required.",
-  }),
+  category: z.enum([
+    "ELECTRONICS",
+    "GROCERY",
+    "CLOTHING",
+    "STATIONERY",
+    "BEAUTY",
+    "FURNITURE",
+    "TOYS",
+    "MEDICINE",
+    "OTHER",
+  ]),
+  price: z.coerce.number().min(0, { message: "Price must be non-negative." }),
+  unit: z.enum([
+    "PIECE",
+    "GRAM",
+    "KILOGRAM",
+    "LITRE",
+    "MILLILITRE",
+    "METER",
+    "CENTIMETER",
+    "BOX",
+    "PACK",
+  ]),
 });
 
-// 🧠 Infer the **input type** (before coercion)
-type ProductFormValues = z.input<typeof formSchema>;
+type ProductFormValues = z.infer<typeof formSchema>;
 
 export default function AddProductPage() {
-  const router = useRouter()
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
+
   const form = useForm<ProductFormValues>({
-    resolver: zodResolver(formSchema),
+    resolver: zodResolver(formSchema) as any,
     defaultValues: {
       name: "",
       description: "",
-      variants: [{ name: "", price: 0 }],
+      category: "OTHER",
+      price: 0,
+      unit: "PIECE",
     },
   });
-
-  const { fields, append, remove } = useFieldArray({
-    control: form.control,
-    name: "variants",
-  });
-
-  const [isPending, startTransition] = useTransition();
 
   const onSubmit = (data: ProductFormValues) => {
     startTransition(async () => {
       try {
         await addProduct(data);
         toast.success("Product added successfully!");
-        router.push("/products")
+        router.push("/products");
       } catch (err: any) {
         console.error(err);
         toast.error("Something went wrong while adding the product.");
@@ -76,15 +92,15 @@ export default function AddProductPage() {
   };
 
   return (
-    <div>
+    <div className="container mx-auto py-8 px-4 md:px-6">
       <div className="flex items-center mb-6">
         <h1 className="font-semibold text-lg md:text-2xl">Add New Product</h1>
       </div>
-      <Card>
+      <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle>Product Information</CardTitle>
           <CardDescription>
-            Enter the product details and at least one variant.
+            Enter complete product details below.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -103,6 +119,7 @@ export default function AddProductPage() {
                   </FormItem>
                 )}
               />
+
               <FormField
                 control={form.control}
                 name="description"
@@ -110,87 +127,88 @@ export default function AddProductPage() {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea placeholder="Brief description..." {...field} />
+                      <Textarea
+                        placeholder="Brief product description..."
+                        {...field}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Variants */}
-              <div className="grid gap-2">
-                <FormLabel>Variants</FormLabel>
-                {fields.map((item, index) => (
-                  <div
-                    key={item.id}
-                    className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-4 items-end border p-4 rounded-md"
-                  >
-                    <FormField
-                      control={form.control}
-                      name={`variants.${index}.name`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className={index === 0 ? "" : "sr-only"}>
-                            Name
-                          </FormLabel>
-                          <FormControl>
-                            <Input placeholder="e.g., Black" {...field} />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    <FormField
-                      control={form.control}
-                      name={`variants.${index}.price`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className={index === 0 ? "" : "sr-only"}>
-                            Price
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min={0}
-                              step={0.1}
-                              placeholder="9999"
-                              {...field}
-                              value={field.value as number}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-
-                    {fields.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => remove(index)}
-                        className="justify-self-end"
+              {/* Group Category, Price, and Unit on the same line */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  control={form.control}
+                  name="category"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Category</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
                       >
-                        <XCircle className="h-5 w-5 text-red-500" />
-                      </Button>
-                    )}
-                  </div>
-                ))}
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => append({ name: "", price: 0 })}
-                  className="w-full"
-                >
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add Variant
-                </Button>
-                {form.formState.errors.variants && (
-                  <p className="text-sm text-destructive mt-2 font-medium">
-                    {form.formState.errors.variants.message}
-                  </p>
-                )}
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select category" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {formSchema.shape.category.options.map((category) => (
+                            <SelectItem key={category} value={category}>
+                              {category.charAt(0) +
+                                category.slice(1).toLowerCase()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Price (PKR)</FormLabel>
+                      <FormControl>
+                        <Input type="number" min={0} step="0.01" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="unit"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Unit</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select unit" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {formSchema.shape.unit.options.map((unit) => (
+                            <SelectItem key={unit} value={unit}>
+                              {unit.charAt(0) + unit.slice(1).toLowerCase()}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <Button type="submit" className="w-full" disabled={isPending}>

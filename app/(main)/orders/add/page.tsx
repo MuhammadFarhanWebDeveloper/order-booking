@@ -1,120 +1,158 @@
-"use client"
+"use client";
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Badge } from "@/components/ui/badge"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { useRouter } from "next/navigation"
-import React, { useState } from "react"
-import { useForm } from "react-hook-form"
-import { toast } from "sonner"
-import z from "zod"
-import CustomerSelectionModal from "@/components/customer-selection-modal"
-import ProductSelectionModal from "@/components/product-selection-modal"
+import { useState, useEffect } from "react";
+import { useRouter } from "nextjs-toploader/app";
+import { toast } from "sonner";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormControl,
+  FormMessage,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import CustomerSelectionModal from "@/components/customer-selection-modal";
+import ProductSelectionModal from "@/components/product-selection-modal";
+import { addOrder } from "@/lib/actions/order.action";
+import z from "zod";
+import { X } from "lucide-react"; // Import X icon for removing products
 
+// 💡 Schema
 const formSchema = z.object({
   customerId: z.string().min(1, { message: "Customer is required." }),
   status: z.enum(["PENDING", "COMPLETED", "CANCELED"]),
   items: z
-    .array(z.string().min(1, { message: "Invalid product id found" }))
-    .min(1, { message: "At least one product must be selected." }),
-})
+    .array(z.string())
+    .min(1, { message: "Select at least one product." }),
+});
 
-type OrderFormValues = z.infer<typeof formSchema>
+type OrderFormValues = z.infer<typeof formSchema>;
 
 export default function AddOrderPage() {
-  const router = useRouter()
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [isCustomerModalOpen, setIsCustomerModalOpen] = useState(false)
-  const [isProductModalOpen, setIsProductModalOpen] = useState(false)
-
-  const [selectedCustomer, setSelectedCustomer] = useState<{
-    id: string
-    name: string
-  } | null>(null)
-  const [selectedProducts, setSelectedProducts] = useState<{ id: string; name: string }[]>([])
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isCustModalOpen, setCustModalOpen] = useState(false);
+  const [isProdModalOpen, setProdModalOpen] = useState(false);
+  const [customer, setCustomer] = useState<{ id: string; name: string } | null>(
+    null
+  );
+  const [products, setProducts] = useState<
+    { id: string; name: string; price: number }[]
+  >([]);
 
   const form = useForm<OrderFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
+      customerId: "",
       status: "PENDING",
       items: [],
-      customerId: "",
     },
-  })
+    mode: "onSubmit",
+    reValidateMode: "onChange",
+  });
 
-  // Effect to update form values when selectedCustomer or selectedProducts change
-  React.useEffect(() => {
-    if (selectedCustomer) {
-      form.setValue("customerId", selectedCustomer.id, { shouldValidate: true })
-    } else {
-      form.setValue("customerId", "", { shouldValidate: true })
-    }
-  }, [selectedCustomer, form])
+  // Update form value when customer selected
+  useEffect(() => {
+    form.setValue("customerId", customer?.id || "", { shouldDirty: true });
+  }, [customer, form]);
 
-  React.useEffect(() => {
+  // Update form value when products selected
+  useEffect(() => {
     form.setValue(
       "items",
-      selectedProducts.map((p) => p.id),
-      { shouldValidate: true },
-    )
-  }, [selectedProducts, form])
+      products.map((p) => p.id),
+      { shouldDirty: true }
+    );
+  }, [products, form]);
+
+  // Clear error on modal close
+  useEffect(() => {
+    if (!isCustModalOpen) form.clearErrors("customerId");
+  }, [isCustModalOpen]);
+
+  useEffect(() => {
+    if (!isProdModalOpen) form.clearErrors("items");
+  }, [isProdModalOpen]);
+
+  const totalAmount = products.reduce((sum, p) => sum + p.price, 0);
+
+  const handleRemoveProduct = (productId: string) => {
+    setProducts((prevProducts) =>
+      prevProducts.filter((p) => p.id !== productId)
+    );
+  };
+
+  const handleClearCustomer = () => {
+    setCustomer(null);
+  };
 
   const onSubmit = async (data: OrderFormValues) => {
-    setIsSubmitting(true)
+    setIsSubmitting(true);
     try {
-      // Simulate API call for addOrder
-      // In a real application, you would call your server action here:
-      // const result = await addOrder(data);
-      console.log("Submitting order data:", data)
-      const result = { success: true } // Placeholder for actual server action result
+      const result = await addOrder({
+        customerId: data.customerId,
+        productIds: data.items,
+        status: data.status,
+        totalAmount,
+      });
 
       if (result.success) {
-        toast.success("Order added successfully.")
-        router.push("/orders")
+        toast.success("Order created successfully!");
+        router.push("/orders");
       } else {
-        toast.error("Failed to add order")
-        // if (result.errors) { // Uncomment if your action returns errors
-        //   Object.entries(result.errors).forEach(([field, message]) => {
-        //     form.setError(field as keyof OrderFormValues, {
-        //       type: "manual",
-        //       message: message as string,
-        //     });
-        //   });
-        // }
+        toast.error(result.message || "Failed to create order.");
+        if (result.errors) {
+          Object.entries(result.errors).forEach(([field, msg]) => {
+            form.setError(field as keyof OrderFormValues, {
+              type: "manual",
+              message: msg as string,
+            });
+          });
+        }
       }
-    } catch (error) {
-      toast.error("An unexpected error occurred.")
+    } catch (err) {
+      console.error(err);
+      toast.error("Unexpected error occurred.");
     } finally {
-      setIsSubmitting(false)
+      setIsSubmitting(false);
     }
-  }
-
-  const handleSelectCustomer = (customer: { id: string; name: string }) => {
-    setSelectedCustomer(customer)
-  }
-
-  const handleSelectProducts = (products: { id: string; name: string }[]) => {
-    setSelectedProducts(products)
-  }
+  };
 
   return (
-    <div>
+    <div className="container mx-auto py-8 px-4 md:px-6">
       <div className="flex items-center mb-6">
         <h1 className="font-semibold text-lg md:text-2xl">Add New Order</h1>
       </div>
-      <Card>
+      <Card className="max-w-2xl mx-auto">
         <CardHeader>
           <CardTitle>Order Information</CardTitle>
-          <CardDescription>Enter the details for the new order.</CardDescription>
+          <CardDescription>
+            Choose customer, products and status below.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="grid gap-6">
-              {/* Customer Selection */}
+            <form className="grid gap-6" onSubmit={form.handleSubmit(onSubmit)}>
+              {/* Customer Field */}
               <FormField
                 control={form.control}
                 name="customerId"
@@ -124,43 +162,72 @@ export default function AddOrderPage() {
                     <div className="flex gap-2">
                       <FormControl>
                         <Input
-                          placeholder="Select a customer"
-                          value={selectedCustomer?.name || ""}
+                          value={customer?.name || ""}
+                          placeholder="Select customer"
                           readOnly
-                          className="flex-1"
                         />
                       </FormControl>
-                      <Button type="button" variant="outline" onClick={() => setIsCustomerModalOpen(true)}>
-                        Select Customer
+                      <Button
+                        type="button"
+                        onClick={() => setCustModalOpen(true)}
+                        variant="outline"
+                      >
+                        Select
                       </Button>
+                      {customer && (
+                        <Button
+                          type="button"
+                          onClick={handleClearCustomer}
+                          variant="ghost"
+                        >
+                          Clear
+                        </Button>
+                      )}
                     </div>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              {/* Product Selection */}
+              {/* Products Field */}
               <FormField
                 control={form.control}
                 name="items"
-                render={({ field }) => (
+                render={() => (
                   <FormItem>
                     <FormLabel>Products</FormLabel>
                     <div className="flex flex-wrap gap-2 p-2 border rounded-md min-h-[40px] items-center">
-                      {selectedProducts.length > 0 ? (
-                        selectedProducts.map((product) => (
-                          <Badge key={product.id} variant="secondary">
-                            {product.name}
+                      {products.length > 0 ? (
+                        products.map((p) => (
+                          <Badge
+                            key={p.id}
+                            variant="secondary"
+                            className="flex items-center gap-1 pr-1"
+                          >
+                            <span>
+                              {p.name} – PKR {p.price}
+                            </span>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-4 w-4 rounded-full"
+                              onClick={() => handleRemoveProduct(p.id)}
+                            >
+                              <X className="h-3 w-3" />
+                              <span className="sr-only">Remove {p.name}</span>
+                            </Button>
                           </Badge>
                         ))
                       ) : (
-                        <span className="text-muted-foreground text-sm">No products selected.</span>
+                        <span className="text-muted-foreground text-sm">
+                          No products selected.
+                        </span>
                       )}
                     </div>
                     <Button
                       type="button"
+                      onClick={() => setProdModalOpen(true)}
                       variant="outline"
-                      onClick={() => setIsProductModalOpen(true)}
                       className="mt-2"
                     >
                       Select Products
@@ -170,17 +237,17 @@ export default function AddOrderPage() {
                 )}
               />
 
-              {/* Status Selection */}
+              {/* Status Field */}
               <FormField
                 control={form.control}
                 name="status"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Status</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select value={field.value} onValueChange={field.onChange}>
                       <FormControl>
                         <SelectTrigger>
-                          <SelectValue placeholder="Select order status" />
+                          <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -194,7 +261,16 @@ export default function AddOrderPage() {
                 )}
               />
 
-              <Button type="submit" className="w-full" disabled={isSubmitting}>
+              {/* Total */}
+              <div className="text-right font-bold text-xl mt-4">
+                Total: PKR {totalAmount.toFixed(2)}
+              </div>
+
+              <Button
+                type="submit"
+                disabled={isSubmitting}
+                className="w-full mt-4"
+              >
                 {isSubmitting ? "Adding Order..." : "Add Order"}
               </Button>
             </form>
@@ -202,18 +278,20 @@ export default function AddOrderPage() {
         </CardContent>
       </Card>
 
+      {/* Modals */}
       <CustomerSelectionModal
-        isOpen={isCustomerModalOpen}
-        onClose={() => setIsCustomerModalOpen(false)}
-        onSelectCustomer={handleSelectCustomer}
+        isOpen={isCustModalOpen}
+        onClose={() => setCustModalOpen(false)}
+        onSelectCustomer={setCustomer}
       />
-
       <ProductSelectionModal
-        isOpen={isProductModalOpen}
-        onClose={() => setIsProductModalOpen(false)}
-        onSelectProducts={handleSelectProducts}
-        initialSelectedProductIds={selectedProducts.map((p) => p.id)}
+        isOpen={isProdModalOpen}
+        onClose={() => setProdModalOpen(false)}
+        onSelectProducts={(list) =>
+          setProducts(list.map((p) => ({ ...p, price: p.price })))
+        }
+        initialSelectedProductIds={products.map((p) => p.id)}
       />
     </div>
-  )
+  );
 }

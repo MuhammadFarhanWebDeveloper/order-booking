@@ -1,73 +1,107 @@
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Badge } from "@/components/ui/badge"
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+
+interface Order {
+  id: string;
+  status: "COMPLETED" | "PENDING" | "CANCELED";
+  createdAt: string;
+  totalAmount: number;
+  customer: {
+    name: string;
+  };
+}
 
 export default function OrdersPage() {
-  const orders = [
-    { id: "#ORD001", customer: "Alice Smith", date: "2025-07-29", total: "$120.00", status: "Completed" },
-    { id: "#ORD002", customer: "Bob Johnson", date: "2025-07-28", total: "$75.50", status: "Pending" },
-    { id: "#ORD003", customer: "Charlie Brown", date: "2025-07-27", total: "$200.00", status: "Shipped" },
-    { id: "#ORD004", customer: "Diana Prince", date: "2025-07-26", total: "$45.00", status: "Cancelled" },
-    { id: "#ORD005", customer: "Eve Adams", date: "2025-07-25", total: "$300.00", status: "Completed" },
-  ]
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [loading, setLoading] = useState(true);
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
-      case "Completed":
-        return "default"
-      case "Pending":
-        return "secondary"
-      case "Shipped":
-        return "outline"
-      case "Cancelled":
-        return "destructive"
+      case "COMPLETED":
+        return "default";
+      case "PENDING":
+        return "secondary";
+      case "CANCELED":
+        return "destructive";
       default:
-        return "default"
+        return "default";
     }
-  }
+  };
+
+  useEffect(() => {
+    const fetchOrders = async () => {
+      try {
+        const res = await fetch("/api/getorders");
+        if (!res.ok) throw new Error("Failed to fetch orders");
+
+        const data = await res.json();
+        setOrders(data.orders || []);
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        toast.error("Failed to load orders.");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchOrders();
+  }, []);
 
   return (
     <div>
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <h1 className="font-semibold text-lg md:text-2xl">Orders</h1>
         <Button asChild size="sm">
-          <Link href="/orders/add">Add New Order</Link>
+          <Link href="/orders/add">+ Add New Order</Link>
         </Button>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Orders</CardTitle>
-          <CardDescription>A list of your recent orders.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Order ID</TableHead>
-                <TableHead>Customer</TableHead>
-                <TableHead className="hidden md:table-cell">Date</TableHead>
-                <TableHead className="text-right">Total</TableHead>
-                <TableHead className="text-center">Status</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {orders.map((order) => (
-                <TableRow key={order.id}>
-                  <TableCell className="font-medium">{order.id}</TableCell>
-                  <TableCell>{order.customer}</TableCell>
-                  <TableCell className="hidden md:table-cell">{order.date}</TableCell>
-                  <TableCell className="text-right">{order.total}</TableCell>
-                  <TableCell className="text-center">
-                    <Badge variant={getStatusBadgeVariant(order.status)}>{order.status}</Badge>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+
+      {loading ? (
+        <p className="text-muted-foreground">Loading orders...</p>
+      ) : orders.length === 0 ? (
+        <p className="text-muted-foreground">No orders found.</p>
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {orders.map((order) => (
+            <Card key={order.id}>
+              <CardHeader>
+                <CardTitle className="text-base flex items-center justify-between">
+                  <span>Order #{order.id.slice(0, 6)}...</span>
+                  <Badge variant={getStatusBadgeVariant(order.status)}>
+                    {order.status}
+                  </Badge>
+                </CardTitle>
+                <CardDescription>
+                  {format(new Date(order.createdAt), "dd MMM yyyy")}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                <div>
+                  <span className="font-medium">Customer:</span>{" "}
+                  {order.customer?.name || "Unknown"}
+                </div>
+                <div>
+                  <span className="font-medium">Total:</span> PKR{" "}
+                  {order.totalAmount.toFixed(2)}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
-  )
+  );
 }

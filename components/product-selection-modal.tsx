@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, use } from "react"
+import { useState, useEffect } from "react"
 import {
   Dialog,
   DialogContent,
@@ -16,19 +16,18 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Label } from "@/components/ui/label"
 import { Search } from "lucide-react"
 
+interface Product {
+  id: string
+  name: string
+  price: number
+}
 
 interface ProductSelectionModalProps {
   isOpen: boolean
   onClose: () => void
-  onSelectProducts: (products: { id: string; name: string }[]) => void
+  onSelectProducts: (products: Product[]) => void
   initialSelectedProductIds: string[]
 }
-
-const getProducts = async () => {
-  const res = await fetch("/api/getproducts");
-  const data = await res.json();
-  return data.products;
-};
 
 export default function ProductSelectionModal({
   isOpen,
@@ -38,18 +37,36 @@ export default function ProductSelectionModal({
 }: ProductSelectionModalProps) {
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedProductIds, setSelectedProductIds] = useState<string[]>([])
-    // const products = use(getProducts()) || [];
-    const products = []
-  
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setSelectedProductIds(initialSelectedProductIds)
   }, [initialSelectedProductIds])
 
-  const filteredProducts = products.filter((product) => product.name.toLowerCase().includes(searchTerm.toLowerCase()))
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const res = await fetch("/api/getproducts")
+        const data = await res.json()
+        setProducts(data.products || [])
+      } catch (err) {
+        console.error("Failed to load products", err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    if (isOpen) fetchProducts()
+  }, [isOpen])
+
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase())
+  )
 
   const handleCheckboxChange = (productId: string, checked: boolean) => {
-    setSelectedProductIds((prev) => (checked ? [...prev, productId] : prev.filter((id) => id !== productId)))
+    setSelectedProductIds((prev) =>
+      checked ? [...prev, productId] : prev.filter((id) => id !== productId)
+    )
   }
 
   const handleConfirm = () => {
@@ -65,6 +82,7 @@ export default function ProductSelectionModal({
           <DialogTitle>Select Products</DialogTitle>
           <DialogDescription>Search for products and select them for the order.</DialogDescription>
         </DialogHeader>
+
         <div className="relative mb-4">
           <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -74,18 +92,23 @@ export default function ProductSelectionModal({
             className="pl-8"
           />
         </div>
+
         <ScrollArea className="h-[300px] pr-4">
           <div className="grid gap-2">
-            {filteredProducts.length > 0 ? (
+            {loading ? (
+              <p className="text-muted-foreground text-center">Loading products...</p>
+            ) : filteredProducts.length > 0 ? (
               filteredProducts.map((product) => (
                 <div key={product.id} className="flex items-center space-x-2 p-2 border rounded-md">
                   <Checkbox
                     id={`product-${product.id}`}
                     checked={selectedProductIds.includes(product.id)}
-                    onCheckedChange={(checked) => handleCheckboxChange(product.id, checked as boolean)}
+                    onCheckedChange={(checked) =>
+                      handleCheckboxChange(product.id, checked as boolean)
+                    }
                   />
                   <Label htmlFor={`product-${product.id}`} className="flex-1 cursor-pointer">
-                    {product.name} - ${product.price.toFixed(2)}
+                    {product.name} – PKR {product.price.toFixed(2)}
                   </Label>
                 </div>
               ))
@@ -94,6 +117,7 @@ export default function ProductSelectionModal({
             )}
           </div>
         </ScrollArea>
+
         <DialogFooter>
           <Button type="button" variant="outline" onClick={onClose}>
             Cancel
