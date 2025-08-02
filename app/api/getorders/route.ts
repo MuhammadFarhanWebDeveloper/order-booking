@@ -2,25 +2,30 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET() {
   try {
-    const products = await prisma.product.findMany({
+    const orders = await prisma.order.findMany({
+      include: {
+        customer: true,
+        items: {
+          include: {
+            product: true,
+          },
+        },
+      },
       orderBy: {
         createdAt: "desc",
-      },
-      include: {
-        orderItems: true, // Optional: remove if not needed
       },
     });
 
     return Response.json({
       success: true,
-      products,
+      orders,
     });
   } catch (error) {
-    console.error("Error fetching products:", error);
+    console.error("Error fetching orders:", error);
     return new Response(
       JSON.stringify({
         success: false,
-        message: "Failed to fetch products",
+        message: "Failed to fetch orders",
       }),
       { status: 500 }
     );

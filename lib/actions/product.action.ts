@@ -1,9 +1,10 @@
 "use server";
 
 import { prisma } from "../prisma";
-import { auth, currentUser } from "@clerk/nextjs/server";
-import { success, z } from "zod";
+import { auth } from "@clerk/nextjs/server";
+import { z } from "zod";
 
+<<<<<<< HEAD
 export const getProducts = async () => {
   const { userId } = await auth();
   if (!userId) {
@@ -27,22 +28,53 @@ export const getProducts = async () => {
   });
   return products;
 };
+=======
+// 🧠 Zod enums must match your Prisma enums (case-sensitive)
+const categoryEnum = z.enum([
+  "ELECTRONICS",
+  "GROCERY",
+  "CLOTHING",
+  "STATIONERY",
+  "BEAUTY",
+  "FURNITURE",
+  "TOYS",
+  "MEDICINE",
+  "OTHER",
+]);
+>>>>>>> features
 
-const variantSchema = z.object({
-  name: z.string().min(1),
-  price: z.coerce.number().min(0),
-});
+const unitEnum = z.enum([
+  "PIECE",
+  "GRAM",
+  "KILOGRAM",
+  "LITRE",
+  "MILLILITRE",
+  "METER",
+  "CENTIMETER",
+  "BOX",
+  "PACK",
+]);
 
 const productSchema = z.object({
   name: z.string().min(1),
   description: z.string().min(1),
-  variants: z.array(variantSchema).min(1),
+  category: categoryEnum,
+  unit: unitEnum,
+  price: z.coerce.number().min(0),
 });
+
+export type ProductFormValues = z.infer<typeof productSchema>;
+
+export const getProducts = async () => {
+  const products = await prisma.product.findMany();
+  return products;
+};
 
 export async function addProduct(data: unknown) {
   try {
-    const user = await currentUser();
-    if (!user || !user.id) {
+    // const user = await currentUser();
+    const {userId}  = await auth()
+    if (!userId) {
       throw new Error("Unauthorized");
     }
 
@@ -52,11 +84,11 @@ export async function addProduct(data: unknown) {
       throw new Error("Validation failed");
     }
 
-    const { name, description, variants } = parsed.data;
+    const { name, description, category, unit, price } = parsed.data;
 
     const dbUser = await prisma.user.findFirst({
       where: {
-        clerkId: user.id,
+        clerkId: userId,
       },
     });
 
@@ -68,12 +100,11 @@ export async function addProduct(data: unknown) {
       data: {
         name,
         description,
+        category,
+        unit,
+        price,
         userId: dbUser.id,
-        variants: {
-          create: variants,
-        },
       },
-      include: { variants: true },
     });
 
     return product;

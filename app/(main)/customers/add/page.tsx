@@ -22,7 +22,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { addCustomer } from "@/lib/actions/customer.action";
-import { useRouter } from "next/navigation";
+import { useRouter } from "nextjs-toploader/app";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -63,7 +63,6 @@ export default function AddCustomerPage() {
       } else {
         toast.error("Failed to add customer");
 
-        
         if (result.errors) {
           Object.entries(result.errors).forEach(([field, message]) => {
             form.setError(field as keyof CustomerFormValues, {
@@ -166,14 +165,6 @@ export default function AddCustomerPage() {
                 )}
               />
               <div className="flex gap-4">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => router.push("/customers")}
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </Button>
                 <Button
                   type="submit"
                   className="w-full"
