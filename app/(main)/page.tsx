@@ -1,7 +1,14 @@
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { prisma } from "@/lib/prisma";
 import { Users, Package, ShoppingCart } from "lucide-react";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+  const [totalOrders, totalCustomers, totalProducts] = await Promise.all([
+    prisma.order.count(),
+    prisma.customer.count(),
+    prisma.product.count(),
+  ]);
+
   return (
     <div>
       <h1 className="font-semibold text-lg md:text-2xl">Dashboard Overview</h1>
@@ -12,10 +19,7 @@ export default function DashboardPage() {
             <ShoppingCart className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,350</div>
-            <p className="text-xs text-muted-foreground">
-              {"From 1,800 last month"}
-            </p>
+            <div className="text-2xl font-bold">{totalOrders}</div>
           </CardContent>
         </Card>
         <Card>
@@ -26,10 +30,7 @@ export default function DashboardPage() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1,200</div>
-            <p className="text-xs text-muted-foreground">
-              {"From 1,050 last month"}
-            </p>
+            <div className="text-2xl font-bold">{totalCustomers}</div>
           </CardContent>
         </Card>
         <Card>
@@ -40,10 +41,7 @@ export default function DashboardPage() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">500</div>
-            <p className="text-xs text-muted-foreground">
-              {"From 480 last month"}
-            </p>
+            <div className="text-2xl font-bold">{totalProducts}</div>
           </CardContent>
         </Card>
       </div>
