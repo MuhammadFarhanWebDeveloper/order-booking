@@ -2,6 +2,7 @@
 
 import { prisma } from "../prisma";
 import { auth } from "@clerk/nextjs/server";
+import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const categoryEnum = z.enum([
@@ -42,7 +43,7 @@ export type ProductFormValues = z.infer<typeof productSchema>;
 export async function addProduct(data: unknown) {
   try {
     // const user = await currentUser();
-    const {userId}  = await auth()
+    const { userId } = await auth();
     if (!userId) {
       throw new Error("Unauthorized");
     }
@@ -55,16 +56,6 @@ export async function addProduct(data: unknown) {
 
     const { name, description, category, unit, price } = parsed.data;
 
-    const dbUser = await prisma.user.findFirst({
-      where: {
-        clerkId: userId,
-      },
-    });
-
-    if (!dbUser) {
-      throw new Error("User not found in DB");
-    }
-
     const product = await prisma.product.create({
       data: {
         name,
@@ -72,7 +63,6 @@ export async function addProduct(data: unknown) {
         category,
         unit,
         price,
-        userId: dbUser.id,
       },
     });
 
@@ -85,20 +75,9 @@ export async function addProduct(data: unknown) {
 
 export async function deleteProduct(id: string) {
   try {
-    const { userId } = await auth();
-    if (!userId) return { success: false, message: "Unauthorized" };
-
-    const user = await prisma.user.findFirst({
-      where: {
-        clerkId: userId,
-      },
-    });
-    if (!user) return { success: false, message: "User not found" };
-
     const product = await prisma.product.findFirst({
       where: {
         id,
-        userId: user.id,
       },
     });
     if (!product)
@@ -117,5 +96,21 @@ export async function deleteProduct(id: string) {
   } catch (error) {
     console.error("Error deleting product:", error);
     return { success: false, message: "Failed to delete product" };
+  }
+}
+
+export async function updateProduct(id: string, data: ProductFormValues) {
+  try {
+    const product = await prisma.product.update({
+      where: { id: id },
+      data: {
+        ...data,
+      },
+    });
+
+    return {success:true, message:"Product edited successfully",product}
+  } catch (error) {
+    console.error("Error editing product:", error);
+    return { success: false, message: "Failed to edit product" };
   }
 }

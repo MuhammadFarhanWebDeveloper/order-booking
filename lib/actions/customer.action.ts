@@ -24,19 +24,11 @@ export const addCustomer = async (data: Customer) => {
     const parsed = customerSchema.safeParse(data);
     if (!parsed.success) {
       console.error("Validation error:", parsed.error.format());
-      return { 
-        success: false, 
+      return {
+        success: false,
         message: "Invalid customer data",
-        errors: parsed.error.flatten() 
+        errors: parsed.error.flatten(),
       };
-    }
-
-    // Find user in database
-    const user = await prisma.user.findUnique({
-      where: { clerkId: userId }
-    });
-    if (!user) {
-      return { success: false, message: "User not found" };
     }
 
     // Create customer with relationship to user
@@ -46,23 +38,44 @@ export const addCustomer = async (data: Customer) => {
         email: parsed.data.email,
         phone: parsed.data.phone,
         address: parsed.data.address,
-        user: { connect: { id: user.id } }
-      }
+      },
     });
 
-    return { 
-      success: true, 
+    return {
+      success: true,
       message: "Customer created successfully",
-      customer 
+      customer,
     };
-
   } catch (error) {
     console.error("Error creating customer:", error);
-    
-    return { 
-      success: false, 
+
+    return {
+      success: false,
       message: "Failed to create customer",
-      error: error instanceof Error ? error.message : "Unknown error"
+    };
+  }
+};
+
+export const deleteCustomer = async (id: string) => {
+  try {
+    const customer = await prisma.customer.findUnique({ where: { id } });
+    if (!customer) {
+      return { success: false, message: "Customer not found" };
+    }
+
+    const deleteCustomer = await prisma.customer.delete({
+      where: {
+        id,
+      },
+    });
+
+    return { success: true, message: "Customer deleted successfully" };
+  } catch (error) {
+    console.error("Error deleting customer:", error);
+
+    return {
+      success: false,
+      message: "Failed to delete customer",
     };
   }
 };
