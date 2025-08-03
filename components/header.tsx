@@ -16,7 +16,7 @@ import { SignedIn, UserButton } from "@clerk/nextjs";
 
 export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
   return (
-    <header className="flex h-14 lg:h-[60px] items-center gap-4 border-b bg-muted/40 px-6">
+    <header className="flex h-14 lg:h-[60px] items-center lg:justify-end justify-between gap-4 border-b bg-muted/40 px-6">
       <Button
         variant="outline"
         size="icon"
@@ -26,18 +26,6 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
         <Menu className="h-5 w-5" />
       </Button>
 
-      <div className="w-full flex-1">
-        <form>
-          <div className="relative">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              placeholder="Search..."
-              className="w-full bg-background shadow-none appearance-none pl-8 md:w-2/3 lg:w-1/3"
-            />
-          </div>
-        </form>
-      </div>
       <SignedIn>
         <UserButton />
       </SignedIn>
