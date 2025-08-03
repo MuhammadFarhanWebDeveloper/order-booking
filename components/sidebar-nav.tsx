@@ -3,14 +3,13 @@
 import Link from "next/link"
 import { Package2, Home, ShoppingCart, Users, Package, CalendarDays } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { usePathname } from "next/navigation"
 
 export function SidebarNav({ onClose }: { onClose?: () => void }) {
   const pathname = usePathname();
   const navItems = [
     { href: "/", icon: Home, label: "Dashboard" },
-    { href: "/orders", icon: ShoppingCart, label: "Orders", badge: 6 },
+    { href: "/orders", icon: ShoppingCart, label: "Orders" },
     { href: "/products", icon: Package, label: "Products" },
     { href: "/customers", icon: Users, label: "Customers" },
   ];
@@ -47,11 +46,7 @@ export function SidebarNav({ onClose }: { onClose?: () => void }) {
             >
               <item.icon className="h-4 w-4" />
               {item.label}
-              {item.badge && (
-                <Badge className="ml-auto flex h-6 w-6 items-center justify-center rounded-full">
-                  {item.badge}
-                </Badge>
-              )}
+   
             </Link>
           ))}
         </nav>

@@ -2,43 +2,37 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { format } from "date-fns";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 
-interface Order {
-  id: string;
-  status: "COMPLETED" | "PENDING" | "CANCELED";
-  createdAt: string;
-  totalAmount: number;
-  customer: {
-    name: string;
-  };
-}
+import OrderCard from "@/components/OrderCard";
+import {
+  Customer,
+  Order,
+  OrderItem,
+  OrderStatus,
+  Product,
+} from "@prisma/client";
+
+type OrderWithItems = Order & {
+  customer: Customer;
+  items: (OrderItem & { product: Product })[];
+};
+
 
 export default function OrdersPage() {
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const getStatusBadgeVariant = (status: string) => {
-    switch (status) {
-      case "COMPLETED":
-        return "default";
-      case "PENDING":
-        return "secondary";
-      case "CANCELED":
-        return "destructive";
-      default:
-        return "default";
-    }
+  const deletePreviousOrder = (id: string) => {
+    setOrders((prev: any) => prev.filter((p: any) => p.id !== id));
+  };
+  const updateStatus = (id: string, newStatus: OrderStatus) => {
+    setOrders((prevOrders) =>
+      prevOrders.map((order) =>
+        order.id === id ? { ...order, status: newStatus } : order
+      )
+    );
   };
 
   useEffect(() => {
@@ -76,29 +70,12 @@ export default function OrdersPage() {
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {orders.map((order) => (
-            <Card key={order.id}>
-              <CardHeader>
-                <CardTitle className="text-base flex items-center justify-between">
-                  <span>Order #{order.id.slice(0, 6)}...</span>
-                  <Badge variant={getStatusBadgeVariant(order.status)}>
-                    {order.status}
-                  </Badge>
-                </CardTitle>
-                <CardDescription>
-                  {format(new Date(order.createdAt), "dd MMM yyyy")}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2 text-sm">
-                <div>
-                  <span className="font-medium">Customer:</span>{" "}
-                  {order.customer?.name || "Unknown"}
-                </div>
-                <div>
-                  <span className="font-medium">Total:</span> PKR{" "}
-                  {order.totalAmount.toFixed(2)}
-                </div>
-              </CardContent>
-            </Card>
+            <OrderCard
+              updateStatus={updateStatus}
+              removeOrderFromArray={deletePreviousOrder}
+              order={order}
+              key={order.id}
+            />
           ))}
         </div>
       )}

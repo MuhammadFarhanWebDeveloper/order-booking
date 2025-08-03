@@ -11,6 +11,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { toast } from "sonner";
+import CustomerCard from "@/components/CustomerCard";
 
 type Customer = {
   id: string;
@@ -22,7 +23,9 @@ type Customer = {
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-
+  const deletePreviousCustomer = (id: string) => {
+    setCustomers((prev: any) => prev.filter((p: any) => p.id !== id));
+  };
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
@@ -61,24 +64,11 @@ export default function CustomersPage() {
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {customers.map((customer) => (
-            <Card key={customer.id}>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{customer.name}</CardTitle>
-                <CardDescription className="text-xs break-all">
-                  ID: {customer.id}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="text-sm space-y-1">
-                <div>
-                  <span className="font-medium">Email:</span>{" "}
-                  {customer.email || "N/A"}
-                </div>
-                <div>
-                  <span className="font-medium">Phone:</span>{" "}
-                  {customer.phone || "N/A"}
-                </div>
-              </CardContent>
-            </Card>
+            <CustomerCard
+              key={customer.id}
+              removeCustomerFromArray={deletePreviousCustomer}
+              customer={customer}
+            />
           ))}
         </div>
       )}

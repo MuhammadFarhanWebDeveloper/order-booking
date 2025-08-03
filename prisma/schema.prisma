@@ -19,10 +19,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  // Relations
-  products  Product[]
-  customers Customer[]
-  orders    Order[]
+
 }
 
 model Customer {
@@ -34,8 +31,6 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  user   User   @relation(fields: [userId], references: [id])
-  userId String
 
   orders Order[]
 }
@@ -45,9 +40,6 @@ model Order {
   totalAmount Float
   status      OrderStatus @default(PENDING)
   createdAt   DateTime    @default(now())
-
-  user        User        @relation(fields: [userId], references: [id])
-  userId      String
 
   customer    Customer    @relation(fields: [customerId], references: [id])
   customerId  String
@@ -65,9 +57,6 @@ model Product {
 
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
-
-  user        User     @relation(fields: [userId], references: [id])
-  userId      String
 
   orderItems  OrderItem[] // Backrelation
 }
@@ -100,14 +89,14 @@ enum Unit {
 model OrderItem {
   id        String   @id @default(cuid())
 
-  order     Order    @relation(fields: [orderId], references: [id])
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
   orderId   String
 
-  product   Product  @relation(fields: [productId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
 
   quantity  Int      @default(1)
-  price     Float    // Price at the time of order
+  price     Float
 }
 
 enum OrderStatus {
