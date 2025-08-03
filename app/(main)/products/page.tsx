@@ -1,24 +1,33 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-
 import ProductCard from "@/components/ProductCard";
 import { Product } from "@prisma/client";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState("all");
 
   const deletePreviousProduct = (id: string) => {
-    setProducts((prev: any) => prev.filter((p: any) => p.id !== id));
+    setProducts((prev) => prev.filter((p) => p.id !== id));
   };
 
   const handleUpdateProduct = (id: string, data: Product) => {
     setProducts((prevProducts) =>
-      prevProducts.map((product) => (product.id == id ? data : product))
+      prevProducts.map((product) => (product.id === id ? data : product))
     );
   };
 
@@ -41,6 +50,25 @@ export default function ProductsPage() {
     fetchProducts();
   }, []);
 
+  const categories = useMemo(() => {
+    const unique = new Set(products.map((p) => p.category));
+    return ["all", ...Array.from(unique)];
+  }, [products]);
+
+  const filteredProducts = useMemo(() => {
+    return products.filter((product) => {
+      const lowerSearch = searchTerm.toLowerCase();
+      const matchesSearch =
+        product.name.toLowerCase().includes(lowerSearch) ||
+        product.description?.toLowerCase().includes(lowerSearch);
+
+      const matchesCategory =
+        selectedCategory === "all" || product.category === selectedCategory;
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchTerm, selectedCategory]);
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
@@ -55,15 +83,44 @@ export default function ProductsPage() {
         </Button>
       </div>
 
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row items-center gap-4 mb-6">
+        <Input
+          type="text"
+          placeholder="Search by name or keyword..."
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full sm:w-1/2"
+        />
+        <Select
+          value={selectedCategory}
+          onValueChange={(value) => setSelectedCategory(value)}
+        >
+          <SelectTrigger className="w-full sm:w-64">
+            <SelectValue placeholder="Filter by category" />
+          </SelectTrigger>
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem key={category} value={category}>
+                {category[0].toUpperCase() + category.slice(1)}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Products Grid */}
       {loading ? (
         <p className="text-muted-foreground">Loading products...</p>
-      ) : products.length === 0 ? (
-        <p className="text-muted-foreground">No products found.</p>
+      ) : filteredProducts.length === 0 ? (
+        <p className="text-muted-foreground">
+          No products match your criteria.
+        </p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
+          {filteredProducts.map((product) => (
             <ProductCard
-            updateClientSideProduct={handleUpdateProduct}
+              updateClientSideProduct={handleUpdateProduct}
               key={product.id}
               product={product}
               removeProductFromArray={deletePreviousProduct}

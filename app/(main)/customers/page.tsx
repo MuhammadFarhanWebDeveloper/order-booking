@@ -10,22 +10,35 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import CustomerCard from "@/components/CustomerCard";
+import type { CustomerFormValues } from "@/components/CustomerForm";
 
 type Customer = {
   id: string;
   name: string;
   email: string;
   phone?: string;
+  address?: string;
 };
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState("");
+
   const deletePreviousCustomer = (id: string) => {
-    setCustomers((prev: any) => prev.filter((p: any) => p.id !== id));
+    setCustomers((prev) => prev.filter((c) => c.id !== id));
   };
+
+  const updateCustomerInArray = (id: string, updated: CustomerFormValues) => {
+    setCustomers((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updated } : c))
+    );
+  };
+
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
@@ -33,7 +46,7 @@ export default function CustomersPage() {
         const data = await res.json();
 
         if (data.success) {
-          setCustomers(data.customers || []); // data.customers → data.data (based on improved API response)
+          setCustomers(data.customers || []);
         } else {
           toast.error(`Failed to fetch customers: ${data.message}`);
         }
@@ -48,6 +61,20 @@ export default function CustomersPage() {
     fetchCustomers();
   }, []);
 
+  useEffect(() => {
+    const lowerSearch = searchTerm.toLowerCase();
+
+    const filtered = customers.filter((c) => {
+      return (
+        c.name.toLowerCase().includes(lowerSearch) ||
+        c.phone?.toLowerCase().includes(lowerSearch) ||
+        c.address?.toLowerCase().includes(lowerSearch)
+      );
+    });
+
+    setFilteredCustomers(filtered);
+  }, [searchTerm, customers]);
+
   return (
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
@@ -57,17 +84,27 @@ export default function CustomersPage() {
         </Button>
       </div>
 
+      {/* 🔍 Search Input */}
+      <div className="mb-6">
+        <Input
+          placeholder="Search by name, phone, or address"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
       {loading ? (
         <p className="text-muted-foreground">Loading customers...</p>
-      ) : customers.length === 0 ? (
-        <p className="text-muted-foreground">No customers found.</p>
+      ) : filteredCustomers.length === 0 ? (
+        <p className="text-muted-foreground">No matching customers found.</p>
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {customers.map((customer) => (
+          {filteredCustomers.map((customer) => (
             <CustomerCard
               key={customer.id}
-              removeCustomerFromArray={deletePreviousCustomer}
               customer={customer}
+              removeCustomerFromArray={deletePreviousCustomer}
+              updateCustomerInArray={updateCustomerInArray}
             />
           ))}
         </div>
