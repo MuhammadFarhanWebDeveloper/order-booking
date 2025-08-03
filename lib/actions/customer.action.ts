@@ -3,6 +3,7 @@
 import z from "zod";
 import { prisma } from "../prisma";
 import { auth } from "@clerk/nextjs/server";
+import { CustomerFormValues } from "@/components/CustomerForm";
 
 export const getCustomers = async () => {
   const customers = await prisma.customer.findMany({});
@@ -81,5 +82,20 @@ export const deleteCustomer = async (id: string) => {
       success: false,
       message: "Failed to delete customer",
     };
+  }
+};
+
+export const updateCustomer = async (id: string, data: CustomerFormValues) => {
+  try {
+    const customer = await prisma.customer.update({
+      where: { id },
+      data: {
+        ...data,
+      },
+    });
+
+    return { success: true };
+  } catch (err) {
+    return { success: false, message: "Something went wrong" };
   }
 };

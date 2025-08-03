@@ -41,7 +41,7 @@ model Order {
   status      OrderStatus @default(PENDING)
   createdAt   DateTime    @default(now())
 
-  customer    Customer    @relation(fields: [customerId], references: [id])
+  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
   customerId  String
 
   items       OrderItem[] // Relation to OrderItem
