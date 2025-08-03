@@ -104,7 +104,7 @@ export default function OrderForm({
                   Select
                 </Button>
                 {customer && (
-                  <Button type="button" variant="ghost" onClick={handleClearCustomer}>
+                  <Button type="button" variant="default" onClick={handleClearCustomer}>
                     Clear
                   </Button>
                 )}
@@ -129,7 +129,7 @@ export default function OrderForm({
                     >
                       <span>{p.name} – PKR {p.price}</span>
                       <Button
-                        variant="ghost"
+                        variant="default"
                         size="icon"
                         className="h-4 w-4 rounded-full"
                         onClick={() => handleRemoveProduct(p.id)}

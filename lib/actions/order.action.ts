@@ -147,4 +147,99 @@ export const updateOrderStatus = async (id: string, newStatus: OrderStatus) => {
   }
 };
 
+export const updateOrder = async (
+  id: string,
+  data: {
+    status: OrderStatus;
+    customerId: string;
+    items: string[]; // array of product IDs
+    totalAmount: number;
+  }
+) => {
+  const { userId } = await auth();
+  if (!userId) {
+    return { success: false, message: "Unauthorized" };
+  }
 
+  // Validate the structure of incoming data
+  const parsed = orderSchema.safeParse({
+    status: data.status,
+    customerId: data.customerId,
+    productIds: data.items,
+    totalAmount: data.totalAmount,
+  });
+
+  if (!parsed.success) {
+    return {
+      success: false,
+      message: "Validation failed",
+      errors: parsed.error.flatten(),
+    };
+  }
+
+  try {
+    const existingOrder = await prisma.order.findUnique({
+      where: { id },
+    });
+
+    if (!existingOrder) {
+      return { success: false, message: "Order not found" };
+    }
+
+    const products = await prisma.product.findMany({
+      where: {
+        id: { in: parsed.data.productIds },
+      },
+    });
+
+    if (products.length !== parsed.data.productIds.length) {
+      return {
+        success: false,
+        message: "One or more selected products do not exist",
+      };
+    }
+
+    await prisma.orderItem.deleteMany({
+      where: { orderId: id },
+    });
+
+    const orderItems = products.map((product) => ({
+      orderId: id,
+      productId: product.id,
+      price: product.price,
+    }));
+
+    await prisma.orderItem.createMany({
+      data: orderItems,
+    });
+
+    const newOrder = await prisma.order.update({
+      where: { id },
+      data: {
+        status: parsed.data.status,
+        customerId: parsed.data.customerId,
+        totalAmount: parsed.data.totalAmount,
+      },
+      include: {
+        items: {
+          include: {
+            product: true, // include product info for each item
+          },
+        },
+        customer: true, // optional: include customer info as well
+      },
+    });
+
+    return {
+      success: true,
+      message: "Order updated successfully",
+      order: newOrder,
+    };
+  } catch (error) {
+    console.error("updateOrder error:", error);
+    return {
+      success: false,
+      message: "Failed to update the order",
+    };
+  }
+};

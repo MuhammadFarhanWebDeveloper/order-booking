@@ -6,7 +6,12 @@ import { toast } from "sonner";
 import { format, isToday, subDays, isAfter } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectTrigger, SelectContent, SelectItem } from "@/components/ui/select";
+import {
+  Select,
+  SelectTrigger,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select";
 
 import OrderCard from "@/components/OrderCard";
 import {
@@ -16,6 +21,7 @@ import {
   OrderStatus,
   Product,
 } from "@prisma/client";
+import { OrderFormValues } from "@/components/OrderForm";
 
 type OrderWithItems = Order & {
   customer: Customer;
@@ -30,6 +36,12 @@ export default function OrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [timeFilter, setTimeFilter] = useState("ALL");
+
+  const updateOrderInArray = (id: string, updated: OrderWithItems) => {
+    setOrders((prev) =>
+      prev.map((c) => (c.id === id ? { ...c, ...updated } : c))
+    );
+  };
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -127,12 +139,14 @@ export default function OrdersPage() {
         <Select value={timeFilter} onValueChange={setTimeFilter}>
           <SelectTrigger className="w-full md:w-48">
             Time:{" "}
-            {{
-              ALL: "All time",
-              TODAY: "Today",
-              "7_DAYS": "Last 7 days",
-              "30_DAYS": "Last 30 days",
-            }[timeFilter]}
+            {
+              {
+                ALL: "All time",
+                TODAY: "Today",
+                "7_DAYS": "Last 7 days",
+                "30_DAYS": "Last 30 days",
+              }[timeFilter]
+            }
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Time</SelectItem>
@@ -155,6 +169,7 @@ export default function OrdersPage() {
               updateStatus={updateStatus}
               removeOrderFromArray={deletePreviousOrder}
               order={order}
+              updateOrderInArray={updateOrderInArray}
             />
           ))}
         </div>
