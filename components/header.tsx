@@ -1,18 +1,9 @@
 "use client";
 
-import Image from "next/image";
 import { Menu, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+
 import { Button } from "@/components/ui/button";
-import { SignedIn, UserButton } from "@clerk/nextjs";
 
 export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
   return (
@@ -38,9 +29,7 @@ export function Header({ onToggleSidebar }: { onToggleSidebar?: () => void }) {
           </div>
         </form>
       </div>
-      <SignedIn>
-        <UserButton />
-      </SignedIn>
+
     </header>
   );
 }

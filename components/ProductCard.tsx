@@ -32,7 +32,8 @@ import { deleteProduct, updateProduct } from "@/lib/actions/product.action";
 import { toast } from "sonner";
 import { Badge } from "./ui/badge";
 import ProductForm, { ProductFormValues } from "./ProductForm";
-import { Category, Product, Unit } from "@prisma/client";
+import { Product, Role } from "@prisma/client";
+import { useSession } from "next-auth/react";
 
 export default function ProductCard({
   product,

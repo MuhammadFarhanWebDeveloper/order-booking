@@ -1,8 +1,6 @@
 "use server";
 
 import { prisma } from "../prisma";
-import { auth } from "@clerk/nextjs/server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 // 🧠 Zod enums must match your Prisma enums (case-sensitive)
@@ -47,11 +45,6 @@ export const getProducts = async () => {
 
 export async function addProduct(data: unknown) {
   try {
-    // const user = await currentUser();
-    const { userId } = await auth();
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
 
     const parsed = productSchema.safeParse(data);
     if (!parsed.success) {

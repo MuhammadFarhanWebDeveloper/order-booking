@@ -2,7 +2,6 @@
 
 import z from "zod";
 import { prisma } from "../prisma";
-import { auth } from "@clerk/nextjs/server";
 import { CustomerFormValues } from "@/components/CustomerForm";
 
 export const getCustomers = async () => {
@@ -20,12 +19,7 @@ type Customer = z.infer<typeof customerSchema>;
 
 export const addCustomer = async (data: Customer) => {
   try {
-    const { userId } = await auth();
-    if (!userId) {
-      return { success: false, message: "Unauthorized" };
-    }
 
-    // Validate input data
     const parsed = customerSchema.safeParse(data);
     if (!parsed.success) {
       console.error("Validation error:", parsed.error.format());

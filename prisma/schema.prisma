@@ -11,15 +11,13 @@ datasource db {
 }
 
 model User {
-  id      String @id @default(cuid())
-  clerkId String @unique
-
-  email     String   @unique
+  id        String   @id @default(cuid())
+  username  String   @unique
+  password  String   
   name      String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-
-
+  role      Role     @default(SALES_AGENT)
 }
 
 model Customer {
@@ -31,7 +29,6 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-
   orders Order[]
 }
 
@@ -41,24 +38,30 @@ model Order {
   status      OrderStatus @default(PENDING)
   createdAt   DateTime    @default(now())
 
-  customer    Customer    @relation(fields: [customerId], references: [id], onDelete: Cascade)
-  customerId  String
+  customer   Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  customerId String
 
-  items       OrderItem[] // Relation to OrderItem
+  items OrderItem[] // Relation to OrderItem
 }
 
 model Product {
   id          String   @id @default(cuid())
   name        String
   description String
-  category    Category         // 🔥 Enum for category
+  category    Category // 🔥 Enum for category
   price       Float
-  unit        Unit             // 🔥 Enum for unit
+  unit        Unit // 🔥 Enum for unit
 
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  orderItems  OrderItem[] // Backrelation
+  orderItems OrderItem[] // Backrelation
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  SALES_AGENT
 }
 
 enum Category {
@@ -85,18 +88,17 @@ enum Unit {
   PACK
 }
 
-
 model OrderItem {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  orderId   String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  orderId String
 
-  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
   productId String
 
-  quantity  Int      @default(1)
-  price     Float
+  quantity Int   @default(1)
+  price    Float
 }
 
 enum OrderStatus {
