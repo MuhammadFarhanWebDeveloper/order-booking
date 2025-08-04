@@ -5,7 +5,7 @@ import Link from "next/link";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import ProductCard from "@/components/ProductCard";
-import { Product } from "@prisma/client";
+import { Product, Role } from "@prisma/client";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -14,12 +14,18 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
+import { useSession } from "next-auth/react";
 
 export default function ProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
+
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === Role.ADMIN;
+  const isManager = session?.user?.role === Role.MANAGER;
+  const isSalesAgent = session?.user?.role === Role.SALES_AGENT;
 
   const deletePreviousProduct = (id: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== id));
@@ -78,9 +84,11 @@ export default function ProductsPage() {
             Manage and view your product inventory here.
           </p>
         </div>
-        <Button asChild size="sm">
-          <Link href="/products/add">+ Add Product</Link>
-        </Button>
+        {isAdmin && (
+          <Button asChild size="sm">
+            <Link href="/products/add">+ Add Product</Link>
+          </Button>
+        )}
       </div>
 
       {/* Search & Filter */}

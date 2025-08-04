@@ -161,9 +161,7 @@ export default function CustomerCard({
           </Dialog>
 
           {/* Edit Button */}
-          {isSalesAgent ? (
-            ""
-          ) : (
+          {isAdmin && (
             <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
               <DialogTrigger asChild>
                 <Button

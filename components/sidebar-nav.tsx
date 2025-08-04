@@ -53,7 +53,7 @@ export function SidebarNav({ onClose }: { onClose?: () => void }) {
         </nav>
       </div>
       <div className="mt-auto p-4 text-xs text-muted-foreground">
-        © 2025 Acme Orders. All rights reserved.
+        Developed by Farhan.
       </div>
     </div>
   );

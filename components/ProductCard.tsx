@@ -48,6 +48,11 @@ export default function ProductCard({
   const [isUpdating, startUpdate] = useTransition();
   const [editOpen, setEditOpen] = useState(false);
 
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === Role.ADMIN;
+  const isManager = session?.user?.role === Role.MANAGER;
+  const isSalesAgent = session?.user?.role === Role.SALES_AGENT;
+
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteProduct(id);
@@ -96,62 +101,66 @@ export default function ProductCard({
         </div>
         <div className="flex gap-1">
           {/* Edit Button (opens modal) */}
-          <Dialog open={editOpen} onOpenChange={setEditOpen}>
-            <DialogTrigger asChild>
-              <Button size="icon" variant="ghost">
-                <Pencil className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Edit Product</DialogTitle>
-              </DialogHeader>
-              <ProductForm
-                initialValues={{
-                  ...product,
-                  description: product.description || "",
-                }}
-                onSubmit={handleUpdate}
-                isPending={isUpdating}
-              />
-            </DialogContent>
-          </Dialog>
+          {isAdmin && (
+            <Dialog open={editOpen} onOpenChange={setEditOpen}>
+              <DialogTrigger asChild>
+                <Button size="icon" variant="ghost">
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Product</DialogTitle>
+                </DialogHeader>
+                <ProductForm
+                  initialValues={{
+                    ...product,
+                    description: product.description || "",
+                  }}
+                  onSubmit={handleUpdate}
+                  isPending={isUpdating}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Delete Button (alert dialog) */}
-          <AlertDialog>
-            <AlertDialogTrigger disabled={isDeleting} asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-red-500 hover:text-red-700"
-              >
-                {isDeleting ? (
-                  <Loader2 className="animate-spin w-4 h-4" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete{" "}
-                  <strong className="text-foreground">{product.name}</strong>.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700"
-                  onClick={() => startDelete(() => handleDelete(product.id))}
-                  disabled={isDeleting}
+          {isAdmin && (
+            <AlertDialog>
+              <AlertDialogTrigger disabled={isDeleting} asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-red-500 hover:text-red-700"
                 >
-                  {isDeleting ? "Deleting..." : "Yes, delete"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  {isDeleting ? (
+                    <Loader2 className="animate-spin w-4 h-4" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete{" "}
+                    <strong className="text-foreground">{product.name}</strong>.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() => startDelete(() => handleDelete(product.id))}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Yes, delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </CardHeader>
 
