@@ -30,12 +30,7 @@ import { createUser } from "@/lib/actions/user.action";
 import { toast } from "sonner";
 import { useTransition } from "react";
 import { useSession } from "next-auth/react";
-
-export enum Role {
-  ADMIN = "ADMIN",
-  MANAGER = "MANAGER",
-  SALES_AGENT = "SALES_AGENT",
-}
+import { Role } from "@prisma/client";
 
 const formSchema = z.object({
   username: z.string().min(5, "Username must be at least 5 characters"),
