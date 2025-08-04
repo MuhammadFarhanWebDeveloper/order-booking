@@ -2,6 +2,8 @@ import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { prisma } from "@/lib/prisma";
 import { Users, Package, ShoppingCart } from "lucide-react";
 
+export const dynamic = "force-dynamic";
+
 export default async function DashboardPage() {
   const [totalOrders, totalCustomers, totalProducts] = await Promise.all([
     prisma.order.count(),
