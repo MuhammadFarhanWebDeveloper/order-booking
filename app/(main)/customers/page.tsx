@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import CustomerCard from "@/components/CustomerCard";
 import type { CustomerFormValues } from "@/components/CustomerForm";
 import { useSession } from "next-auth/react";
+import { useDebounce } from "use-debounce"; // 👈 new
 
 type Customer = {
   id: string;
@@ -20,11 +20,15 @@ type Customer = {
 
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
-    const { data: session } = useSession();
-    const isAdmin = session?.user?.role === "ADMIN";
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 400); // 👈 debounce for 400ms
+  const [page, setPage] = useState(1);
+  const [limit] = useState(6);
+  const [totalPages, setTotalPages] = useState(1);
+
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
 
   const deletePreviousCustomer = (id: string) => {
     setCustomers((prev) => prev.filter((c) => c.id !== id));
@@ -36,41 +40,35 @@ export default function CustomersPage() {
     );
   };
 
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const res = await fetch("/api/getcustomers");
-        const data = await res.json();
+  const fetchCustomers = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        q: debouncedSearchTerm,
+        page: page.toString(),
+        limit: limit.toString(),
+      });
 
-        if (data.success) {
-          setCustomers(data.customers || []);
-        } else {
-          toast.error(`Failed to fetch customers: ${data.message}`);
-        }
-      } catch (error) {
-        console.error("Error fetching customers:", error);
-        toast.error("An unexpected error occurred while fetching customers.");
-      } finally {
-        setLoading(false);
+      const res = await fetch(`/api/getcustomers?${params}`);
+      const data = await res.json();
+
+      if (data.success) {
+        setCustomers(data.data || []);
+        setTotalPages(data.pagination?.totalPages || 1);
+      } else {
+        toast.error(`Failed to fetch customers: ${data.message}`);
       }
-    };
-
-    fetchCustomers();
-  }, []);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+      toast.error("An unexpected error occurred while fetching customers.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const lowerSearch = searchTerm.toLowerCase();
-
-    const filtered = customers.filter((c) => {
-      return (
-        c.name.toLowerCase().includes(lowerSearch) ||
-        c.phone?.toLowerCase().includes(lowerSearch) ||
-        c.address?.toLowerCase().includes(lowerSearch)
-      );
-    });
-
-    setFilteredCustomers(filtered);
-  }, [searchTerm, customers]);
+    fetchCustomers();
+  }, [debouncedSearchTerm, page]); // 👈 trigger only when debounced term or page changes
 
   return (
     <div>
@@ -88,25 +86,53 @@ export default function CustomersPage() {
         <Input
           placeholder="Search by name, phone, or address"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setPage(1); // Reset to page 1 when searching
+            setSearchTerm(e.target.value);
+          }}
         />
       </div>
 
       {loading ? (
         <p className="text-muted-foreground">Loading customers...</p>
-      ) : filteredCustomers.length === 0 ? (
+      ) : customers.length === 0 ? (
         <p className="text-muted-foreground">No matching customers found.</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {filteredCustomers.map((customer) => (
-            <CustomerCard
-              key={customer.id}
-              customer={customer}
-              removeCustomerFromArray={deletePreviousCustomer}
-              updateCustomerInArray={updateCustomerInArray}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {customers.map((customer) => (
+              <CustomerCard
+                key={customer.id}
+                customer={customer}
+                removeCustomerFromArray={deletePreviousCustomer}
+                updateCustomerInArray={updateCustomerInArray}
+              />
+            ))}
+          </div>
+
+          {/* Pagination Controls */}
+          <div className="flex items-center justify-center gap-4 mt-6">
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.max(p - 1, 1))}
+              disabled={page === 1}
+            >
+              Previous
+            </Button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => setPage((p) => Math.min(p + 1, totalPages))}
+              disabled={page === totalPages}
+            >
+              Next
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );

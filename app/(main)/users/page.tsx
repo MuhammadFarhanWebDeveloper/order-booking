@@ -32,19 +32,32 @@ import { useSession } from "next-auth/react";
 
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
-  const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [roleFilter, setRoleFilter] = useState<"ALL" | "ADMIN" | "MANAGER" | "SALES_AGENT">("ALL");
+
+  const [page, setPage] = useState(1);
+  const [limit] = useState(10);
+  const [totalPages, setTotalPages] = useState(1);
 
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const isManager = session?.user?.role === "MANAGER";
+
   const fetchUsersData = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/getusers");
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: limit.toString(),
+        role: roleFilter,
+        q: searchTerm.trim(),
+      });
+
+      const res = await fetch(`/api/getusers?${params.toString()}`);
       const data = await res.json();
+
       if (data.success && data.users) {
         const usersWithDates = data.users.map((user: User) => ({
           ...user,
@@ -52,6 +65,7 @@ export default function UsersPage() {
           updatedAt: new Date(user.updatedAt),
         }));
         setUsers(usersWithDates);
+        setTotalPages(data.pagination?.totalPages || 1);
       } else {
         toast.error(`Failed to fetch users: ${data.message}`);
       }
@@ -65,19 +79,7 @@ export default function UsersPage() {
 
   useEffect(() => {
     fetchUsersData();
-  }, []);
-
-  useEffect(() => {
-    const lowerSearch = searchTerm.toLowerCase();
-    const filtered = users.filter((user) => {
-      return (
-        user.username.toLowerCase().includes(lowerSearch) ||
-        user.name?.toLowerCase().includes(lowerSearch) ||
-        user.role.toLowerCase().includes(lowerSearch)
-      );
-    });
-    setFilteredUsers(filtered);
-  }, [searchTerm, users]);
+  }, [page, roleFilter, searchTerm]);
 
   const handleDeleteUser = async (id: string) => {
     try {
@@ -114,88 +116,124 @@ export default function UsersPage() {
           </Button>
         )}
       </div>
-      <div className="mb-6">
+
+      <div className="mb-4 flex gap-4 flex-col sm:flex-row">
         <Input
-          placeholder="Search by username, name, or role"
+          placeholder="Search by name, or username"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setSearchTerm(e.target.value);
+            setPage(1);
+          }}
           className="max-w-sm"
         />
+        <select
+          className="border rounded px-3 py-2 text-sm"
+          value={roleFilter}
+          onChange={(e) => {
+            setRoleFilter(e.target.value as any);
+            setPage(1);
+          }}
+        >
+          <option value="ALL">All Roles</option>
+          <option value="ADMIN">Admin</option>
+          <option value="MANAGER">Manager</option>
+          <option value="SALES_AGENT">Sales Agent</option>
+        </select>
       </div>
+
       {loading ? (
         <p className="text-muted-foreground">Loading users...</p>
-      ) : filteredUsers.length === 0 ? (
+      ) : users.length === 0 ? (
         <p className="text-muted-foreground">No matching users found.</p>
       ) : (
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Username</TableHead>
-                <TableHead>Name</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Created At</TableHead>
-                <TableHead>Updated At</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredUsers.map((user) => (
-                <TableRow key={user.id}>
-                  <TableCell className="font-medium">{user.username}</TableCell>
-                  <TableCell>{user.name}</TableCell>
-                  <TableCell>{user.role}</TableCell>
-                  <TableCell>{formatDate(user.createdAt)}</TableCell>
-                  <TableCell>{formatDate(user.updatedAt)}</TableCell>
-                  <TableCell className="text-right">
-                    {isAdmin && (
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="text-red-600 hover:bg-red-100"
-                            onClick={() => setSelectedUserId(user.id)}
-                          >
-                            <Trash2Icon className="h-4 w-4" />
-                            <span className="sr-only">Delete</span>
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>
-                              Are you absolutely sure?
-                            </AlertDialogTitle>
-                            <AlertDialogDescription>
-                              This action cannot be undone. This will
-                              permanently delete{" "}
-                              <strong>{user.name || user.username}</strong>'s
-                              account.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => {
-                                if (selectedUserId) {
-                                  handleDeleteUser(selectedUserId);
-                                  setSelectedUserId(null);
-                                }
-                              }}
-                              className="bg-red-600 hover:bg-red-700"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    )}
-                  </TableCell>
+        <>
+          <div className="rounded-md border">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Username</TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Role</TableHead>
+                  <TableHead>Created At</TableHead>
+                  <TableHead>Updated At</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+              </TableHeader>
+              <TableBody>
+                {users.map((user) => (
+                  <TableRow key={user.id}>
+                    <TableCell className="font-medium">{user.username}</TableCell>
+                    <TableCell>{user.name}</TableCell>
+                    <TableCell>{user.role}</TableCell>
+                    <TableCell>{formatDate(user.createdAt)}</TableCell>
+                    <TableCell>{formatDate(user.updatedAt)}</TableCell>
+                    <TableCell className="text-right">
+                      {isAdmin && (
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="text-red-600 hover:bg-red-100"
+                              onClick={() => setSelectedUserId(user.id)}
+                            >
+                              <Trash2Icon className="h-4 w-4" />
+                              <span className="sr-only">Delete</span>
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete{" "}
+                                <strong>{user.name || user.username}</strong>'s account.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => {
+                                  if (selectedUserId) {
+                                    handleDeleteUser(selectedUserId);
+                                    setSelectedUserId(null);
+                                  }
+                                }}
+                                className="bg-red-600 hover:bg-red-700"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+
+          {totalPages > 1 && (
+            <div className="mt-4 flex justify-center gap-4 text-sm">
+              <Button
+                variant="outline"
+                disabled={page === 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <span className="self-center">Page {page} of {totalPages}</span>
+              <Button
+                variant="outline"
+                disabled={page === totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

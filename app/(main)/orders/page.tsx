@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { toast } from "sonner";
-import { format, isToday, subDays, isAfter } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import {
@@ -12,7 +11,6 @@ import {
   SelectContent,
   SelectItem,
 } from "@/components/ui/select";
-
 import OrderCard from "@/components/OrderCard";
 import {
   Customer,
@@ -21,8 +19,8 @@ import {
   OrderStatus,
   Product,
 } from "@prisma/client";
-import { OrderFormValues } from "@/components/OrderForm";
 import { useSession } from "next-auth/react";
+import { useDebounce } from "use-debounce";
 
 type OrderWithItems = Order & {
   customer: Customer;
@@ -31,75 +29,26 @@ type OrderWithItems = Order & {
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
   const { data: session } = useSession();
   const isAdmin = session?.user?.role === "ADMIN";
   const isManager = session?.user?.role === "MANAGER";
 
   const [searchTerm, setSearchTerm] = useState("");
+  const [debouncedSearchTerm] = useDebounce(searchTerm, 500);
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [timeFilter, setTimeFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const updateOrderInArray = (id: string, updated: OrderWithItems) => {
     setOrders((prev) =>
-      prev.map((c) => (c.id === id ? { ...c, ...updated } : c))
+      prev.map((o) => (o.id === id ? { ...o, ...updated } : o))
     );
   };
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await fetch("/api/getorders");
-        if (!res.ok) throw new Error("Failed to fetch orders");
-
-        const data = await res.json();
-        setOrders(data.orders || []);
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        toast.error("Failed to load orders.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchOrders();
-  }, []);
-
-  useEffect(() => {
-    const lowerSearch = searchTerm.toLowerCase();
-
-    const filtered = orders.filter((order) => {
-      const matchesSearch =
-        order.id.toLowerCase().includes(lowerSearch) ||
-        order.customer.name?.toLowerCase().includes(lowerSearch) ||
-        order.customer.phone?.toLowerCase().includes(lowerSearch);
-
-      const matchesStatus =
-        statusFilter === "ALL" || order.status === statusFilter;
-
-      const createdAt = new Date(order.createdAt);
-      const now = new Date();
-
-      const matchesTime =
-        timeFilter === "ALL"
-          ? true
-          : timeFilter === "TODAY"
-          ? isToday(createdAt)
-          : timeFilter === "7_DAYS"
-          ? isAfter(createdAt, subDays(now, 7))
-          : timeFilter === "30_DAYS"
-          ? isAfter(createdAt, subDays(now, 30))
-          : true;
-
-      return matchesSearch && matchesStatus && matchesTime;
-    });
-
-    setFilteredOrders(filtered);
-  }, [orders, searchTerm, statusFilter, timeFilter]);
-
   const deletePreviousOrder = (id: string) => {
-    setOrders((prev) => prev.filter((p) => p.id !== id));
+    setOrders((prev) => prev.filter((o) => o.id !== id));
   };
 
   const updateStatus = (id: string, newStatus: OrderStatus) => {
@@ -109,6 +58,37 @@ export default function OrdersPage() {
       )
     );
   };
+
+  const fetchOrders = async () => {
+    setLoading(true);
+    try {
+      const params = new URLSearchParams({
+        q: debouncedSearchTerm,
+        page: page.toString(),
+        limit: "12",
+        status: statusFilter,
+        time: timeFilter,
+      });
+
+      const res = await fetch(`/api/getorders?${params}`);
+      const data = await res.json();
+
+      if (!res.ok || !data.success)
+        throw new Error(data.message || "Unknown error");
+
+      setOrders(data.data || []);
+      setTotalPages(data.pagination.totalPages);
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      toast.error("Failed to load orders.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchOrders();
+  }, [debouncedSearchTerm, statusFilter, timeFilter, page]);
 
   return (
     <div>
@@ -121,16 +101,25 @@ export default function OrdersPage() {
         )}
       </div>
 
-      {/* 🔍 Search and Filters */}
+      {/* 🔍 Filters */}
       <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
         <Input
           placeholder="Search by Order ID, Customer Name, or Phone"
           value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+          onChange={(e) => {
+            setPage(1);
+            setSearchTerm(e.target.value);
+          }}
           className="md:w-1/3"
         />
 
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select
+          value={statusFilter}
+          onValueChange={(val) => {
+            setPage(1);
+            setStatusFilter(val);
+          }}
+        >
           <SelectTrigger className="w-full md:w-48">
             Status: {statusFilter === "ALL" ? "All" : statusFilter}
           </SelectTrigger>
@@ -142,16 +131,24 @@ export default function OrdersPage() {
           </SelectContent>
         </Select>
 
-        <Select value={timeFilter} onValueChange={setTimeFilter}>
+        <Select
+          value={timeFilter}
+          onValueChange={(val) => {
+            setPage(1);
+            setTimeFilter(val);
+          }}
+        >
           <SelectTrigger className="w-full md:w-48">
             Time:{" "}
             {
-              {
-                ALL: "All time",
-                TODAY: "Today",
-                "7_DAYS": "Last 7 days",
-                "30_DAYS": "Last 30 days",
-              }[timeFilter]
+              (
+                {
+                  ALL: "All Time",
+                  TODAY: "Today",
+                  "7_DAYS": "Last 7 Days",
+                  "30_DAYS": "Last 30 Days",
+                } as any
+              )[timeFilter]
             }
           </SelectTrigger>
           <SelectContent>
@@ -165,20 +162,45 @@ export default function OrdersPage() {
 
       {loading ? (
         <p className="text-muted-foreground">Loading orders...</p>
-      ) : filteredOrders.length === 0 ? (
+      ) : orders.length === 0 ? (
         <p className="text-muted-foreground">No matching orders found.</p>
       ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {filteredOrders.map((order) => (
-            <OrderCard
-              key={order.id}
-              updateStatus={updateStatus}
-              removeOrderFromArray={deletePreviousOrder}
-              order={order}
-              updateOrderInArray={updateOrderInArray}
-            />
-          ))}
-        </div>
+        <>
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {orders.map((order) => (
+              <OrderCard
+                key={order.id}
+                updateStatus={updateStatus}
+                removeOrderFromArray={deletePreviousOrder}
+                order={order}
+                updateOrderInArray={updateOrderInArray}
+              />
+            ))}
+          </div>
+
+          {/* Pagination */}
+          <div className="flex items-center justify-center mt-6 gap-4">
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page <= 1}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+            >
+              ← Prev
+            </Button>
+            <span>
+              Page {page} of {totalPages}
+            </span>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled={page >= totalPages}
+              onClick={() => setPage((p) => p + 1)}
+            >
+              Next →
+            </Button>
+          </div>
+        </>
       )}
     </div>
   );
