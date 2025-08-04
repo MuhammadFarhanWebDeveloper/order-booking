@@ -149,12 +149,7 @@ export const updateOrder = async (
     totalAmount: number;
   }
 ) => {
-  const { userId } = await auth();
-  if (!userId) {
-    return { success: false, message: "Unauthorized" };
-  }
 
-  // Validate the structure of incoming data
   const parsed = orderSchema.safeParse({
     status: data.status,
     customerId: data.customerId,
