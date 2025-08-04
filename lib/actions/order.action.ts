@@ -1,16 +1,11 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
 import z from "zod";
 import { prisma } from "../prisma";
 import { OrderStatus, Prisma } from "@prisma/client";
-import { PrismaClientUnknownRequestError } from "@prisma/client/runtime/library";
 
 export const getOrders = async () => {
-  const { userId } = await auth();
-  if (!userId) {
-    return { success: false, message: "Unauthorized" };
-  }
+
 
   const orders = await prisma.order.findMany({
     include: {
@@ -42,8 +37,6 @@ const orderSchema = z.object({
 type OrderFormInput = z.infer<typeof orderSchema>;
 
 export const addOrder = async (data: OrderFormInput) => {
-  const { userId } = await auth();
-  if (!userId) return { success: false, message: "Invalid authentication" };
 
   const parsed = orderSchema.safeParse(data);
   if (!parsed.success) {

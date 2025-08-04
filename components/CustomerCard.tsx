@@ -32,6 +32,8 @@ import {
 import { Button } from "./ui/button";
 import { Loader2, Trash2, Pencil, Eye } from "lucide-react";
 import CustomerForm, { CustomerFormValues } from "@/components/CustomerForm";
+import { useSession } from "next-auth/react";
+import { Role } from "@prisma/client";
 
 export default function CustomerCard({
   customer,
@@ -54,6 +56,11 @@ export default function CustomerCard({
   const [isUpdating, setIsUpdating] = useState(false);
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [openViewDialog, setOpenViewDialog] = useState(false); // 👈 New
+
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === Role.ADMIN;
+  const isManager = session?.user?.role === Role.MANAGER;
+  const isSalesAgent = session?.user?.role === Role.SALES_AGENT;
 
   const handleDelete = async (id: string) => {
     try {
@@ -105,6 +112,7 @@ export default function CustomerCard({
 
         <div className="flex gap-2">
           {/* View Button */}
+
           <Dialog open={openViewDialog} onOpenChange={setOpenViewDialog}>
             <DialogTrigger asChild>
               <Button
@@ -153,68 +161,76 @@ export default function CustomerCard({
           </Dialog>
 
           {/* Edit Button */}
-          <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
-            <DialogTrigger asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-blue-500 hover:text-blue-700"
-              >
-                <Pencil className="w-4 h-4" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="sm:max-w-md">
-              <DialogHeader>
-                <DialogTitle>Edit Customer</DialogTitle>
-              </DialogHeader>
-              <CustomerForm
-                initialValues={{
-                  name: customer.name,
-                  email: customer.email || "",
-                  phone: customer.phone || "",
-                  address: customer.address || "",
-                }}
-                onSubmit={handleUpdate}
-                isSubmitting={isUpdating}
-              />
-            </DialogContent>
-          </Dialog>
-
-          {/* Delete Button */}
-          <AlertDialog>
-            <AlertDialogTrigger disabled={isDeleting} asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-red-500 hover:text-red-700"
-              >
-                {isDeleting ? (
-                  <Loader2 className="animate-spin w-4 h-4" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete{" "}
-                  <strong className="text-foreground">{customer.name}</strong>.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700"
-                  onClick={() => startDeletion(() => handleDelete(customer.id))}
-                  disabled={isDeleting}
+          {isSalesAgent ? (
+            ""
+          ) : (
+            <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-blue-500 hover:text-blue-700"
                 >
-                  {isDeleting ? "Deleting..." : "Yes, delete"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  <Pencil className="w-4 h-4" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Edit Customer</DialogTitle>
+                </DialogHeader>
+                <CustomerForm
+                  initialValues={{
+                    name: customer.name,
+                    email: customer.email || "",
+                    phone: customer.phone || "",
+                    address: customer.address || "",
+                  }}
+                  onSubmit={handleUpdate}
+                  isSubmitting={isUpdating}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
+          {/* Delete Button */}
+          {isAdmin && (
+            <AlertDialog>
+              <AlertDialogTrigger disabled={isDeleting} asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-red-500 hover:text-red-700"
+                >
+                  {isDeleting ? (
+                    <Loader2 className="animate-spin w-4 h-4" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete{" "}
+                    <strong className="text-foreground">{customer.name}</strong>
+                    .
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() =>
+                      startDeletion(() => handleDelete(customer.id))
+                    }
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Yes, delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </CardHeader>
 

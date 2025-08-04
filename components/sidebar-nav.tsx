@@ -1,7 +1,7 @@
 "use client"
 
 import Link from "next/link"
-import { Package2, Home, ShoppingCart, Users, Package, CalendarDays } from "lucide-react"
+import { Package2, Home, ShoppingCart, Users, Package, CalendarDays, User } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePathname } from "next/navigation"
 
@@ -11,7 +11,8 @@ export function SidebarNav({ onClose }: { onClose?: () => void }) {
     { href: "/", icon: Home, label: "Dashboard" },
     { href: "/orders", icon: ShoppingCart, label: "Orders" },
     { href: "/products", icon: Package, label: "Products" },
-    { href: "/customers", icon: Users, label: "Customers" },
+    { href: "/customers", icon: User, label: "Customers" },
+    {href:"/users", icon:Users, label:"Manage Users"}
   ];
 
   return (

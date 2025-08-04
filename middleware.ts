@@ -1,18 +1,37 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server'
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import NextAuth from "next-auth";
+import { authConfig } from "./auth.config";
+import { Role } from "@prisma/client";
 
-const isPublicRoute = createRouteMatcher(['/sign-in(.*)'])
+const { auth } = NextAuth(authConfig);
 
-export default clerkMiddleware(async (auth, req) => {
-  if (!isPublicRoute(req)) {
-    await auth.protect()
+export default auth(async function middleware(req: NextRequest) {
+  const url = req.nextUrl;
+  const session = req.auth;
+  const path = url.pathname;
+  const role = session?.user?.role;
+
+  const isLoggedIn = !!session;
+  const publicPaths = ["/login"];
+
+  if (publicPaths.includes(path)) {
+    return NextResponse.next();
   }
-})
+
+  if (!isLoggedIn) {
+    return NextResponse.redirect(new URL("/login", req.url));
+  }
+
+  if (path.startsWith("/users/add") && role == Role.SALES_AGENT) {
+    return NextResponse.rewrite(new URL("/404", req.url));
+  }
+
+  return NextResponse.next();
+});
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
+    "/((?!api/auth|_next/static|_next/image|favicon.ico|robots.txt|sitemap.xml).*)",
   ],
-}
+};

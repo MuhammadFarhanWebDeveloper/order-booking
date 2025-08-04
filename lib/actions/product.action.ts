@@ -1,8 +1,6 @@
 "use server";
 
 import { prisma } from "../prisma";
-import { auth } from "@clerk/nextjs/server";
-import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 const categoryEnum = z.enum([
@@ -42,11 +40,6 @@ export type ProductFormValues = z.infer<typeof productSchema>;
 
 export async function addProduct(data: unknown) {
   try {
-    // const user = await currentUser();
-    const { userId } = await auth();
-    if (!userId) {
-      throw new Error("Unauthorized");
-    }
 
     const parsed = productSchema.safeParse(data);
     if (!parsed.success) {

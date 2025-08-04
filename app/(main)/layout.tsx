@@ -1,8 +1,6 @@
 "use client";
 import { SidebarNav } from "@/components/sidebar-nav";
 import { Header } from "@/components/header";
-import { Toaster } from "@/components/ui/sonner";
-import { createUserIfNotExists } from "@/lib/createUser";
 import React, { useState, useEffect } from "react";
 
 export default function MainLayout({
@@ -12,9 +10,7 @@ export default function MainLayout({
 }) {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  useEffect(() => {
-    createUserIfNotExists();
-  }, []);
+
 
   return (
     <div className="grid min-h-screen w-full overflow-hidden lg:grid-cols-[280px_1fr]">
@@ -40,7 +36,6 @@ export default function MainLayout({
         <Header onToggleSidebar={() => setIsSidebarOpen(true)} />
         <main className="flex flex-1 flex-col gap-4 p-4 md:gap-8 md:p-6">
           {children}
-          <Toaster richColors position="top-right" />
         </main>
       </div>
     </div>
