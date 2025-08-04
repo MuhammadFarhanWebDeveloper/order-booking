@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import CustomerCard from "@/components/CustomerCard";
 import type { CustomerFormValues } from "@/components/CustomerForm";
+import { useSession } from "next-auth/react";
 
 type Customer = {
   id: string;
@@ -21,6 +22,8 @@ export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [filteredCustomers, setFilteredCustomers] = useState<Customer[]>([]);
   const [loading, setLoading] = useState(true);
+    const { data: session } = useSession();
+    const isAdmin = session?.user?.role === "ADMIN";
   const [searchTerm, setSearchTerm] = useState("");
 
   const deletePreviousCustomer = (id: string) => {
@@ -73,9 +76,11 @@ export default function CustomersPage() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <h1 className="font-semibold text-lg md:text-2xl">Customers</h1>
-        <Button asChild size="sm">
-          <Link href="/customers/add">+ Add New Customer</Link>
-        </Button>
+        {isAdmin && (
+          <Button asChild size="sm">
+            <Link href="/customers/add">+ Add New Customer</Link>
+          </Button>
+        )}
       </div>
 
       {/* 🔍 Search Input */}

@@ -3,6 +3,7 @@
 import z from "zod";
 import { prisma } from "../prisma";
 import { CustomerFormValues } from "@/components/CustomerForm";
+import { onlyAdmin } from "../access.utils";
 
 
 const customerSchema = z.object({
@@ -15,7 +16,7 @@ type Customer = z.infer<typeof customerSchema>;
 
 export const addCustomer = async (data: Customer) => {
   try {
-
+    await onlyAdmin()
     const parsed = customerSchema.safeParse(data);
     if (!parsed.success) {
       console.error("Validation error:", parsed.error.format());
@@ -53,6 +54,8 @@ export const addCustomer = async (data: Customer) => {
 
 export const deleteCustomer = async (id: string) => {
   try {
+        await onlyAdmin()
+
     const customer = await prisma.customer.findUnique({ where: { id } });
     if (!customer) {
       return { success: false, message: "Customer not found" };
@@ -77,6 +80,8 @@ export const deleteCustomer = async (id: string) => {
 
 export const updateCustomer = async (id: string, data: CustomerFormValues) => {
   try {
+        await onlyAdmin()
+
     const customer = await prisma.customer.update({
       where: { id },
       data: {

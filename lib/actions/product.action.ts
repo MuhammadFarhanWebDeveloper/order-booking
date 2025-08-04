@@ -1,5 +1,6 @@
 "use server";
 
+import { onlyAdmin } from "../access.utils";
 import { prisma } from "../prisma";
 import { z } from "zod";
 
@@ -37,10 +38,9 @@ const productSchema = z.object({
 
 export type ProductFormValues = z.infer<typeof productSchema>;
 
-
 export async function addProduct(data: unknown) {
   try {
-
+    await onlyAdmin();
     const parsed = productSchema.safeParse(data);
     if (!parsed.success) {
       console.error(parsed.error.format());
@@ -68,6 +68,8 @@ export async function addProduct(data: unknown) {
 
 export async function deleteProduct(id: string) {
   try {
+    await onlyAdmin();
+
     const product = await prisma.product.findFirst({
       where: {
         id,
@@ -94,6 +96,8 @@ export async function deleteProduct(id: string) {
 
 export async function updateProduct(id: string, data: ProductFormValues) {
   try {
+    await onlyAdmin();
+
     const product = await prisma.product.update({
       where: { id: id },
       data: {
@@ -101,7 +105,7 @@ export async function updateProduct(id: string, data: ProductFormValues) {
       },
     });
 
-    return {success:true, message:"Product edited successfully",product}
+    return { success: true, message: "Product edited successfully", product };
   } catch (error) {
     console.error("Error editing product:", error);
     return { success: false, message: "Failed to edit product" };

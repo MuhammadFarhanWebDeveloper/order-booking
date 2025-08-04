@@ -7,13 +7,12 @@ import { Role } from "@prisma/client";
 const { auth } = NextAuth(authConfig);
 
 export default auth(async function middleware(req: NextRequest) {
-  const url = req.nextUrl;
-  const session = req.auth;
-  const path = url.pathname;
+  const { nextUrl, auth: session } = req;
+  const path = nextUrl.pathname;
   const role = session?.user?.role;
 
-  const isLoggedIn = !!session;
   const publicPaths = ["/login"];
+  const isLoggedIn = !!session;
 
   if (publicPaths.includes(path)) {
     return NextResponse.next();
@@ -23,7 +22,14 @@ export default auth(async function middleware(req: NextRequest) {
     return NextResponse.redirect(new URL("/login", req.url));
   }
 
-  if (path.startsWith("/users/add") && role == Role.SALES_AGENT) {
+  // Routes only accessible by ADMIN
+  const adminOnlyPaths = ["/users/add", "/customers/add", "/product/add"];
+  if (adminOnlyPaths.some((adminPath) => path.startsWith(adminPath)) && role !== Role.ADMIN) {
+    return NextResponse.rewrite(new URL("/404", req.url));
+  }
+
+  // Specific restriction for SALES_AGENT
+  if (path.startsWith("/orders/add") && role === Role.SALES_AGENT) {
     return NextResponse.rewrite(new URL("/404", req.url));
   }
 

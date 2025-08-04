@@ -14,7 +14,7 @@ export async function createUser(data: {
 }) {
   const { username, password, name, role } = data;
 
-  await adminAndManager();
+  await onlyAdmin();
   const session = await auth();
 
   if (password.length < 8) {
@@ -82,7 +82,7 @@ export async function createUser(data: {
 }
 
 export async function deleteUser(id: string) {
-  onlyAdmin();
+  await onlyAdmin();
   try {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) {

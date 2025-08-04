@@ -45,6 +45,7 @@ import {
   Product,
 } from "@prisma/client";
 import OrderForm, { OrderFormValues } from "./OrderForm";
+import { useSession } from "next-auth/react";
 
 type OrderWithItems = Order & {
   customer: Customer;
@@ -55,7 +56,7 @@ export default function OrderCard({
   order,
   removeOrderFromArray,
   updateStatus,
-  updateOrderInArray
+  updateOrderInArray,
 }: {
   order: OrderWithItems;
   removeOrderFromArray: (id: string) => void;
@@ -68,6 +69,9 @@ export default function OrderCard({
   const [openEditDialog, setOpenEditDialog] = useState(false);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const isManager = session?.user?.role === "MANAGER";
   const handleDelete = async (id: string) => {
     try {
       const res = await deleteOrder(id);
@@ -216,67 +220,71 @@ export default function OrderCard({
           </Dialog>
 
           {/* Edit Button and Dialog */}
-          <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
-            <DialogTrigger asChild>
-              <Button variant="ghost" size="icon">
-                <Pencil className="w-4 h-4 text-muted-foreground" />
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-2xl">
-              <DialogHeader>
-                <DialogTitle>Edit Order #{order.id.slice(0, 8)}</DialogTitle>
-              </DialogHeader>
+          {(isAdmin || isManager) && (
+            <Dialog open={openEditDialog} onOpenChange={setOpenEditDialog}>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <Pencil className="w-4 h-4 text-muted-foreground" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-2xl">
+                <DialogHeader>
+                  <DialogTitle>Edit Order #{order.id.slice(0, 8)}</DialogTitle>
+                </DialogHeader>
 
-              <OrderForm
-                initialData={{
-                  id: order.id,
-                  customerId: order.customer.id,
-                  customer: order.customer,
-                  status: order.status,
-                  items: order.items.map((item) => item.product.id),
-                  productList: order.items.map((item) => item.product),
-                }}
-                onSubmit={handleEditSubmit}
-                isSubmitting={isSubmittingEdit}
-              />
-            </DialogContent>
-          </Dialog>
+                <OrderForm
+                  initialData={{
+                    id: order.id,
+                    customerId: order.customer.id,
+                    customer: order.customer,
+                    status: order.status,
+                    items: order.items.map((item) => item.product.id),
+                    productList: order.items.map((item) => item.product),
+                  }}
+                  onSubmit={handleEditSubmit}
+                  isSubmitting={isSubmittingEdit}
+                />
+              </DialogContent>
+            </Dialog>
+          )}
 
           {/* Delete */}
-          <AlertDialog>
-            <AlertDialogTrigger disabled={isDeleting} asChild>
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-red-500 hover:text-red-700"
-              >
-                {isDeleting ? (
-                  <Loader2 className="animate-spin w-4 h-4" />
-                ) : (
-                  <Trash2 className="w-4 h-4" />
-                )}
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will permanently delete order{" "}
-                  <strong className="text-foreground">{order.id}</strong>.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction
-                  className="bg-red-600 hover:bg-red-700"
-                  onClick={() => startDeletion(() => handleDelete(order.id))}
-                  disabled={isDeleting}
+          {(isAdmin || isManager) && (
+            <AlertDialog>
+              <AlertDialogTrigger disabled={isDeleting} asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="text-red-500 hover:text-red-700"
                 >
-                  {isDeleting ? "Deleting..." : "Yes, delete"}
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
+                  {isDeleting ? (
+                    <Loader2 className="animate-spin w-4 h-4" />
+                  ) : (
+                    <Trash2 className="w-4 h-4" />
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This will permanently delete order{" "}
+                    <strong className="text-foreground">{order.id}</strong>.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    className="bg-red-600 hover:bg-red-700"
+                    onClick={() => startDeletion(() => handleDelete(order.id))}
+                    disabled={isDeleting}
+                  >
+                    {isDeleting ? "Deleting..." : "Yes, delete"}
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
         </div>
       </CardHeader>
 
@@ -289,31 +297,38 @@ export default function OrderCard({
           <span className="font-medium">Total:</span> PKR{" "}
           {order.totalAmount.toFixed(2)}
         </div>
-
-        {order.status === "PENDING" && (
-          <div className="flex gap-2 pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                startUpdating(() => handleUpdateStatus(order.id, "CANCELED"))
-              }
-              disabled={isUpdating}
-            >
-              <Ban className="w-4 h-4 mr-1" />
-              Cancel
-            </Button>
-            <Button
-              variant="default"
-              size="sm"
-              onClick={() =>
-                startUpdating(() => handleUpdateStatus(order.id, "COMPLETED"))
-              }
-              disabled={isUpdating}
-            >
-              <CheckCircle2 className="w-4 h-4 mr-1" />
-              Complete
-            </Button>
+        {(isAdmin || isManager) && (
+          <div>
+            {order.status === "PENDING" && (
+              <div className="flex gap-2 pt-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    startUpdating(() =>
+                      handleUpdateStatus(order.id, "CANCELED")
+                    )
+                  }
+                  disabled={isUpdating}
+                >
+                  <Ban className="w-4 h-4 mr-1" />
+                  Cancel
+                </Button>
+                <Button
+                  variant="default"
+                  size="sm"
+                  onClick={() =>
+                    startUpdating(() =>
+                      handleUpdateStatus(order.id, "COMPLETED")
+                    )
+                  }
+                  disabled={isUpdating}
+                >
+                  <CheckCircle2 className="w-4 h-4 mr-1" />
+                  Complete
+                </Button>
+              </div>
+            )}
           </div>
         )}
       </CardContent>

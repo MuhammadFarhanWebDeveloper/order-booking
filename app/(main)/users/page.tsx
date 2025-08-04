@@ -106,7 +106,7 @@ export default function UsersPage() {
     <div className="container mx-auto py-8">
       <div className="mb-6 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
         <h1 className="text-lg font-semibold md:text-2xl">Users</h1>
-        {(isAdmin || isManager) && (
+        {(isAdmin) && (
           <Button asChild size="sm">
             <Link href="/users/add">
               <PlusIcon className="mr-2 h-4 w-4" /> Add New User

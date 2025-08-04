@@ -3,6 +3,7 @@
 import z from "zod";
 import { prisma } from "../prisma";
 import { OrderStatus, Prisma } from "@prisma/client";
+import { adminAndManager } from "../access.utils";
 
 export const getOrders = async () => {
 
@@ -38,6 +39,8 @@ type OrderFormInput = z.infer<typeof orderSchema>;
 
 export const addOrder = async (data: OrderFormInput) => {
 
+  await adminAndManager()
+
   const parsed = orderSchema.safeParse(data);
   if (!parsed.success) {
     console.error("Validation error:", parsed.error.format());
@@ -62,14 +65,14 @@ export const addOrder = async (data: OrderFormInput) => {
 
   const orderItems = products.map((product) => ({
     product: { connect: { id: product.id } },
-    quantity: 1, // Default, or make this dynamic later
+    quantity: 1, 
     price: product.price,
   }));
 
   const order = await prisma.order.create({
     data: {
       status: parsed.data.status,
-      totalAmount: parsed.data.totalAmount, // Or recalculate from products if needed
+      totalAmount: parsed.data.totalAmount, 
       customerId: parsed.data.customerId,
       items: {
         create: orderItems,
@@ -86,6 +89,8 @@ export const addOrder = async (data: OrderFormInput) => {
 
 export const deleteOrder = async (id: string) => {
   try {
+      await adminAndManager()
+
     const order = await prisma.order.findUnique({ where: { id } });
     if (!order) {
       return { success: false, message: "Order not found" };
@@ -110,6 +115,8 @@ export const deleteOrder = async (id: string) => {
 
 export const updateOrderStatus = async (id: string, newStatus: OrderStatus) => {
   try {
+      await adminAndManager()
+
     const updatedOrder = await prisma.order.update({
       where: { id },
       data: { status: newStatus },
@@ -145,10 +152,13 @@ export const updateOrder = async (
   data: {
     status: OrderStatus;
     customerId: string;
-    items: string[]; // array of product IDs
+    items: string[]; 
     totalAmount: number;
   }
 ) => {
+
+    await adminAndManager()
+
 
   const parsed = orderSchema.safeParse({
     status: data.status,
@@ -211,10 +221,10 @@ export const updateOrder = async (
       include: {
         items: {
           include: {
-            product: true, // include product info for each item
+            product: true, 
           },
         },
-        customer: true, // optional: include customer info as well
+        customer: true, 
       },
     });
 

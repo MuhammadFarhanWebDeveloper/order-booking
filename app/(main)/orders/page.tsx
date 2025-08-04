@@ -22,6 +22,7 @@ import {
   Product,
 } from "@prisma/client";
 import { OrderFormValues } from "@/components/OrderForm";
+import { useSession } from "next-auth/react";
 
 type OrderWithItems = Order & {
   customer: Customer;
@@ -32,6 +33,9 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<OrderWithItems[]>([]);
   const [filteredOrders, setFilteredOrders] = useState<OrderWithItems[]>([]);
   const [loading, setLoading] = useState(true);
+  const { data: session } = useSession();
+  const isAdmin = session?.user?.role === "ADMIN";
+  const isManager = session?.user?.role === "MANAGER";
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
@@ -110,9 +114,11 @@ export default function OrdersPage() {
     <div>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-4">
         <h1 className="font-semibold text-lg md:text-2xl">Orders</h1>
-        <Button asChild size="sm">
-          <Link href="/orders/add">+ Add New Order</Link>
-        </Button>
+        {(isAdmin || isManager) && (
+          <Button asChild size="sm">
+            <Link href="/orders/add">+ Add New Order</Link>
+          </Button>
+        )}
       </div>
 
       {/* 🔍 Search and Filters */}
